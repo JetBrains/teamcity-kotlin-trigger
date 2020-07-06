@@ -11,12 +11,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class SimpleTrigger extends BuildTriggerService {
-    public static String ENABLE_PROPERTY = "enable";
-    public static String DELAY_PROPERTY = "delay";
+    public static final String ENABLE_PROPERTY = "enable";
+    public static final String DELAY_PROPERTY = "delay";
+
+    private static final String PREVIOUS_CALL_TIME = "previousCallTime";
 
     private final PluginDescriptor myPluginDescriptor;
-
-    private Date previousCallDate = null;
 
     public SimpleTrigger(@NotNull final PluginDescriptor descriptor) {
         myPluginDescriptor = descriptor;
@@ -50,7 +50,7 @@ public class SimpleTrigger extends BuildTriggerService {
         if (delay != 1)
             period.insert(0, " ").insert(0, delay);
 
-        return "Initiates your build each " + period;
+        return "Initiates a build every " + period;
     }
 
     @Nullable
@@ -99,13 +99,28 @@ public class SimpleTrigger extends BuildTriggerService {
 
                 if (!getEnable(properties) || null == delay) return;
 
-                Date currentDate = new Date();
-                if (previousCallDate == null || currentDate.getTime() - previousCallDate.getTime() >= delay * 60_000) {
+                long currentDate = new Date().getTime();
+                Long previousCallTime = getPreviousCallTime(polledTriggerContext);
+
+                if (previousCallTime == null || currentDate - previousCallTime >= delay * 60_000) {
                     polledTriggerContext.getBuildType().addToQueue(getName() + " " + currentDate);
-                    previousCallDate = currentDate;
+                    setPreviousCallTime(currentDate, polledTriggerContext);
                 }
             }
         };
+    }
+
+    private void setPreviousCallTime(long time, PolledTriggerContext context) {
+        context.getCustomDataStorage().putValue(PREVIOUS_CALL_TIME, Long.toString(time));
+    }
+
+    private Long getPreviousCallTime(PolledTriggerContext context) {
+        try {
+            String previousCallTimeStr = context.getCustomDataStorage().getValue(PREVIOUS_CALL_TIME);
+            return Long.parseLong(Objects.requireNonNull(previousCallTimeStr));
+        } catch (NumberFormatException | NullPointerException e) {
+            return null;
+        }
     }
 
     private boolean getEnable(Map<String, String> properties) {
