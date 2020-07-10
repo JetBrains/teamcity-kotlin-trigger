@@ -17,10 +17,13 @@ const val port = 8080
 class RemoteTriggerPolicy : AsyncPolledBuildTrigger {
     private var actionReference: AtomicReference<Actions?> = AtomicReference(null)
 
+    private var currVal: Int = 1
+    private var requestSent = false
+
     override fun triggerActivated(context: PolledTriggerContext) = synchronized(this) {
         if (actionReference.get() == null) {
-            logDebugIfEnabled(createContextLogger(context), "Trigger activation initialized a new connection")
-            actionReference.compareAndSet(null, Client(host, port).run())
+            logDebugIfEnabled(createContextLogger(context)) { "Trigger activation initialized a new connection" }
+            actionReference.set(Client(host, port).run())
         }
     }
 
@@ -29,9 +32,6 @@ class RemoteTriggerPolicy : AsyncPolledBuildTrigger {
         actionReference.set(null)
     }
 
-    private var currVal: Int = 1
-    private var requestSent = false
-
     @Throws(BuildTriggerException::class)
     override fun triggerBuild(prev: String?, context: PolledTriggerContext): String? = synchronized(this) {
         if (prev != null && prev == currVal.toString()) return prev
@@ -39,7 +39,7 @@ class RemoteTriggerPolicy : AsyncPolledBuildTrigger {
         val contextLogger = createContextLogger(context)
 
         val actions = actionReference.get() ?: run {
-            logDebugIfEnabled(contextLogger, "triggerBuild() initialized a new connection")
+            logDebugIfEnabled(contextLogger) { "triggerBuild() initialized a new connection" }
             Client(host, port).run()
         }
         actionReference.compareAndSet(null, actions)
@@ -52,8 +52,9 @@ class RemoteTriggerPolicy : AsyncPolledBuildTrigger {
 
         val answer = actions.awaitRead(5, TimeUnit.SECONDS)
         if (answer == null) {
-            logDebugIfEnabled(createContextLogger(context),
-                    "Request timed out, will retry with next triggerBuild() invocation")
+            logDebugIfEnabled(createContextLogger(context)) {
+                "Request timed out, will retry with next triggerBuild() invocation"
+            }
             requestSent = false
             return prev
         }
@@ -78,9 +79,9 @@ class RemoteTriggerPolicy : AsyncPolledBuildTrigger {
     private fun createContextLogger(ctx: PolledTriggerContext): Logger =
             Logger.getInstance(RemoteTriggerPolicy::class.qualifiedName + "_" + ctx.buildType.externalId)
 
-    private fun logDebugIfEnabled(logger: Logger, msg: String) {
+    private fun logDebugIfEnabled(logger: Logger, msg: () -> String) {
         if (logger.isDebugEnabled)
-            logger.debug(msg)
+            logger.debug(msg())
     }
 }
 

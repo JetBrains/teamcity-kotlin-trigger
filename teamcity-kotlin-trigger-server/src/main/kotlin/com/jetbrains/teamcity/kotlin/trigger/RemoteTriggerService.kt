@@ -29,7 +29,7 @@ class RemoteTriggerService(private val myPluginDescriptor: PluginDescriptor,
 
         val period = StringBuilder("minute")
 
-        if (delay % 10 != 1) period.append("s")
+        if (delay % 10 != 1 || delay % 100 == 11) period.append("s")
         if (delay != 1) period.insert(0, " ").insert(0, delay)
 
         return "Initiates a build every $period"
@@ -41,9 +41,8 @@ class RemoteTriggerService(private val myPluginDescriptor: PluginDescriptor,
                 val delay = getDelay(properties)
 
                 if (enable && (delay == null || delay <= 0)) {
-                    return@PropertiesProcessor listOf(InvalidProperty(DELAY, "Specify a correct delay, please"))
-                }
-                emptyList()
+                    listOf(InvalidProperty(DELAY, "Specify a correct delay, please"))
+                } else emptyList()
             }
 
     override fun getEditParametersUrl() = myPluginDescriptor.getPluginResourcesPath("teamcity-kotlin-trigger.jsp")

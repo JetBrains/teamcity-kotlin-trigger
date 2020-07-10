@@ -19,11 +19,11 @@ internal class Server(private val port: Int) {
             bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel::class.java)
                     .childHandler(object : ChannelInitializer<SocketChannel>() {
-                        override fun initChannel(channel: SocketChannel?) {
-                            channel?.pipeline()
-                                    ?.addLast(StringDecoder(CharsetUtil.UTF_8))
-                                    ?.addLast(ServerJsonDecoder())
-                                    ?.addLast(ServerChannelHandler())
+                        override fun initChannel(channel: SocketChannel) {
+                            channel.pipeline()
+                                    .addLast(StringDecoder(CharsetUtil.UTF_8))
+                                    .addLast(ServerJsonDecoder())
+                                    .addLast(ServerChannelHandler())
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)

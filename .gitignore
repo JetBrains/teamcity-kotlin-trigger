@@ -4,3 +4,4 @@
 /teamcity-kotlin-trigger-remote/src/main/resources/
 /teamcity-kotlin-trigger-remote/target/
 /teamcity-kotlin-trigger-server/target/
+*.iml

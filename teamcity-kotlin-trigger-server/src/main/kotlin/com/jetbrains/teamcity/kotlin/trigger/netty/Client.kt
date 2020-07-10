@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 internal class Client(private val host: String, private val port: Int) {
+    private val logger = Logger.getInstance(Client::class.qualifiedName)
+
     fun run(): Actions {
         val workerGroup = NioEventLoopGroup()
 
@@ -29,20 +31,18 @@ internal class Client(private val host: String, private val port: Int) {
                     .channel(NioSocketChannel::class.java)
                     .option(ChannelOption.SO_KEEPALIVE, true)
                     .handler(object : ChannelInitializer<SocketChannel>() {
-                        override fun initChannel(channel: SocketChannel?) {
-                            channel?.also {
-                                channel.pipeline()
-                                        .addLast(StringEncoder(CharsetUtil.UTF_8))
-                                        .addLast(ClientJsonEncoder())
-                                        .addLast(ClientHandler())
-                                        .addLast(TriggerBuildEventHandler())
+                        override fun initChannel(channel: SocketChannel) {
+                            channel.pipeline()
+                                    .addLast(StringEncoder(CharsetUtil.UTF_8))
+                                    .addLast(ClientJsonEncoder())
+                                    .addLast(ClientHandler())
+                                    .addLast(TriggerBuildEventHandler())
 
-                                channel.attr(setActionsAttributeKey)
-                                        .set { fireEvent, awaitRead, closeConnection ->
-                                            actions = Actions(fireEvent, awaitRead, closeConnection)
-                                            actionsAvailable.release()
-                                        }
-                            }
+                            channel.attr(setActionsAttributeKey)
+                                    .set { fireEvent, awaitRead, closeConnection ->
+                                        actions = Actions(fireEvent, awaitRead, closeConnection)
+                                        actionsAvailable.release()
+                                    }
                         }
                     })
             channelFuture = bootstrap.connect(host, port).sync()
@@ -57,7 +57,6 @@ internal class Client(private val host: String, private val port: Int) {
                 channelFuture.channel().closeFuture().sync() // wait until connection is closed
             } finally {
                 workerGroup.shutdownGracefully()
-                val logger = Logger.getInstance(Client::class.qualifiedName)
                 if (logger.isDebugEnabled) {
                     logger.debug("Connection shut down without exception")
                 }
@@ -69,5 +68,5 @@ internal class Client(private val host: String, private val port: Int) {
 }
 
 internal class Actions(val fireEvent: (Event) -> Unit,
-              val awaitRead: (Long, TimeUnit) -> Boolean?,
-                              val closeConnection: () -> Unit)
+                       val awaitRead: (Long, TimeUnit) -> Boolean?,
+                       val closeConnection: () -> Unit)

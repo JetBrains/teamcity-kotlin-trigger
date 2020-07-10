@@ -25,6 +25,13 @@
             <version>${kotlin.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.github.salomonbrys.kotson</groupId>
+            <artifactId>kotson</artifactId>
+            <version>2.5.0</version>
+            <scope>compile</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
