@@ -1,5 +1,5 @@
 <%@ include file="/include.jsp" %>
-<%@ page import="com.jetbrains.teamcity.boris.simplePlugin.SimpleTrigger" %>
+<%@ page import="com.jetbrains.teamcity.boris.simplePlugin.RemoteTriggerServiceKt" %>
 <%@ page import="jetbrains.buildServer.util.StringUtil" %>
 <%@ taglib prefix="props" tagdir="/WEB-INF/tags/props" %>
 <jsp:useBean id="propertiesBean" type="jetbrains.buildServer.controllers.BasePropertiesBean" scope="request"/>
@@ -11,24 +11,24 @@
 </tr>
 <tr>
     <td>
-        <props:checkboxProperty name="<%=SimpleTrigger.ENABLE_PROPERTY%>"
+        <props:checkboxProperty name="<%=RemoteTriggerServiceKt.ENABLE%>"
                                 onclick="window.SimpleTrigger.checkboxUpdate(this);"/>
-        <label for="<%=SimpleTrigger.ENABLE_PROPERTY%>">Enable trigger</label>
+        <label for="<%=RemoteTriggerServiceKt.ENABLE%>">Enable trigger</label>
         <span class="smallNote">
           consider turning this flag off in case you are tired of this trigger<br/>
         </span>
-        <span class="error" id="error_<%=SimpleTrigger.ENABLE_PROPERTY%>"></span>
+        <span class="error" id="error_<%=RemoteTriggerServiceKt.ENABLE%>"></span>
     </td>
 </tr>
 <tr class="delay"
-        <% if (!StringUtil.isTrue(propertiesBean.getProperties().get(SimpleTrigger.ENABLE_PROPERTY))) { %>
+        <% if (!StringUtil.isTrue(propertiesBean.getProperties().get(RemoteTriggerServiceKt.ENABLE))) { %>
     style="display: none"
         <% } %>
 >
     <td>
-        <label for="<%=SimpleTrigger.DELAY_PROPERTY%>">Delay, m:</label>
-        <props:textProperty name="<%=SimpleTrigger.DELAY_PROPERTY%>"/>
-        <span class="error" id="error_<%=SimpleTrigger.DELAY_PROPERTY%>"></span>
+        <label for="<%=RemoteTriggerServiceKt.DELAY%>">Delay, m:</label>
+        <props:textProperty name="<%=RemoteTriggerServiceKt.DELAY%>"/>
+        <span class="error" id="error_<%=RemoteTriggerServiceKt.DELAY%>"></span>
     </td>
 </tr>
 
