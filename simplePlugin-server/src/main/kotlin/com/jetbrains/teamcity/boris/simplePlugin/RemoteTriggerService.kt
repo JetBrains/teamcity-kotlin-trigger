@@ -46,12 +46,6 @@ class RemoteTriggerService(private val myPluginDescriptor: PluginDescriptor,
                 emptyList()
             }
 
-    // TODO: remove
-    override fun getDefaultTriggerProperties() = hashMapOf(
-            ENABLE to "true",
-            DELAY to "10"
-    )
-
     override fun getEditParametersUrl() = myPluginDescriptor.getPluginResourcesPath("simpleTrigger.jsp")
 
     override fun isMultipleTriggersPerBuildTypeAllowed() = true

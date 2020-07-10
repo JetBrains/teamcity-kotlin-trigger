@@ -11,13 +11,16 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
+const val host = "localhost"
+const val port = 8080
+
 class RemoteTriggerPolicy : AsyncPolledBuildTrigger {
     private var actionReference: AtomicReference<Actions?> = AtomicReference(null)
 
     override fun triggerActivated(context: PolledTriggerContext) = synchronized(this) {
         if (actionReference.get() == null) {
             logDebugIfEnabled(createContextLogger(context), "Trigger activation initialized a new connection")
-            actionReference.compareAndSet(null, Client("localhost", 8080).run())
+            actionReference.compareAndSet(null, Client(host, port).run())
         }
     }
 
@@ -37,7 +40,7 @@ class RemoteTriggerPolicy : AsyncPolledBuildTrigger {
 
         val actions = actionReference.get() ?: run {
             logDebugIfEnabled(contextLogger, "triggerBuild() initialized a new connection")
-            Client("localhost", 8080).run()
+            Client(host, port).run()
         }
         actionReference.compareAndSet(null, actions)
 

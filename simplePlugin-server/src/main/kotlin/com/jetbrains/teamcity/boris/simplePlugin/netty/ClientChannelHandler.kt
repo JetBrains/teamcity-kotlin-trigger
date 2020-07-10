@@ -30,7 +30,7 @@ internal class ClientHandler : ChannelInboundHandlerAdapter() {
         }
     }
 
-    // TODO: consider introducing time limit for put() operation
+    // TODO: consider introducing time limit for put() operation or some other handling of queue size overflow
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         try {
             val answer = (msg as? ByteBuf)?.readBoolean() ?: return
