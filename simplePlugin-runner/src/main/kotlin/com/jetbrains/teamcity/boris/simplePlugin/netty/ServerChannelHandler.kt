@@ -4,8 +4,10 @@ import com.jetbrains.teamcity.boris.simplePlugin.Trigger
 import com.jetbrains.teamcity.boris.simplePlugin.loadTrigger
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
+import java.util.logging.Level
+import java.util.logging.Logger
 
-internal class ServerHandler : ChannelInboundHandlerAdapter() {
+internal class ServerChannelHandler : ChannelInboundHandlerAdapter() {
     private var trigger: Trigger? = null
 
     override fun channelActive(ctx: ChannelHandlerContext?) {
@@ -17,23 +19,26 @@ internal class ServerHandler : ChannelInboundHandlerAdapter() {
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         ctx!!.also { ctx ->
             msg!!.also { msg ->
-                val dataMap = msg as Map<String, String>
+                val logger = Logger.getLogger(ServerChannelHandler::class.qualifiedName + "_" + ctx.channel().id())
 
+                val dataMap = msg as Map<String, String>
                 val answer = trigger?.triggerBuild(dataMap) ?: run {
-                    println("Trigger is not loaded")
+                    logger.warning("Trigger is not loaded")
                     false
                 }
 
                 val response = ctx.alloc().buffer(1).writeBoolean(answer)
                 ctx.writeAndFlush(response)
-                println("Answer: $answer")
-                println()
+                logger.info("Sending response: $answer")
             }
         }
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext?, cause: Throwable?) {
-        cause?.printStackTrace()
-        ctx?.close()
+        ctx!!.also {
+            val logger = Logger.getLogger(ServerChannelHandler::class.qualifiedName + "_" + ctx.channel().id())
+            logger.log(Level.SEVERE, "Inbound exception caught, connection will be closed", cause)
+            ctx.close()
+        }
     }
 }

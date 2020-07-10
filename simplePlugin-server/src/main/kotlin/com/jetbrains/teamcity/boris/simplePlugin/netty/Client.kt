@@ -1,5 +1,6 @@
 package com.jetbrains.teamcity.boris.simplePlugin.netty
 
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.Mutex
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelFuture
@@ -19,7 +20,7 @@ internal class Client(private val host: String, private val port: Int) {
 
         var actions: Actions? = null
         val actionsAvailable = Mutex()
-        actionsAvailable.acquire()
+        actionsAvailable.acquire() // when called later, make it block until actions are set
 
         val channelFuture: ChannelFuture
         try {
@@ -53,9 +54,13 @@ internal class Client(private val host: String, private val port: Int) {
 
         thread {
             try {
-                channelFuture.channel().closeFuture().sync()
+                channelFuture.channel().closeFuture().sync() // wait until connection is closed
             } finally {
                 workerGroup.shutdownGracefully()
+                val logger = Logger.getInstance(Client::class.qualifiedName)
+                if (logger.isDebugEnabled) {
+                    logger.debug("Connection shut down without exception")
+                }
             }
         }
 

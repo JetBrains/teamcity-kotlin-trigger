@@ -8,6 +8,7 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.string.StringDecoder
 import io.netty.util.CharsetUtil
+import java.util.logging.Logger
 
 internal class Server(private val port: Int) {
     fun run() {
@@ -22,7 +23,7 @@ internal class Server(private val port: Int) {
                             channel?.pipeline()
                                     ?.addLast(StringDecoder(CharsetUtil.UTF_8))
                                     ?.addLast(ServerJsonDecoder())
-                                    ?.addLast(ServerHandler())
+                                    ?.addLast(ServerChannelHandler())
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)
@@ -33,6 +34,9 @@ internal class Server(private val port: Int) {
         } finally {
             workerGroup.shutdownGracefully()
             bossGroup.shutdownGracefully()
+
+            val logger = Logger.getLogger(Server::class.qualifiedName)
+            logger.info("Connection shut down without exception")
         }
     }
 }
