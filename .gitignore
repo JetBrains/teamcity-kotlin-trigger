@@ -1,5 +1,6 @@
 /.idea/
 /target/
 /build/target/
-/simplePlugin-server/target/
-/simplePlugin-runner/target/
+/teamcity-kotlin-trigger-remote/src/main/resources/
+/teamcity-kotlin-trigger-remote/target/
+/teamcity-kotlin-trigger-server/target/

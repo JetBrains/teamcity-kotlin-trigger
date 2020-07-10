@@ -1,0 +1,12 @@
+package com.jetbrains.teamcity.kotlin.trigger.netty
+
+import com.google.gson.Gson
+import io.netty.channel.ChannelHandlerContext
+import io.netty.handler.codec.MessageToMessageEncoder
+
+internal class ClientJsonEncoder : MessageToMessageEncoder<Map<String, String>>() {
+    override fun encode(ctx: ChannelHandlerContext?, map: Map<String, String>?, out: MutableList<Any>?) {
+        out?.add(Gson().toJson(map))
+                ?: error("Could not produce encoded json: output list is null")
+    }
+}

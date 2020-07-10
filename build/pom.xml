@@ -2,22 +2,22 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>simplePlugin</artifactId>
-    <groupId>com.jetbrains.teamcity.boris.simplePlugin</groupId>
+    <artifactId>teamcity-kotlin-trigger</artifactId>
+    <groupId>com.jetbrains.teamcity.kotlin.trigger</groupId>
     <version>1.0-SNAPSHOT</version>
   </parent>
   <artifactId>build</artifactId>
   <packaging>pom</packaging>
   <properties>
       <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
-      <teamcity.simplePlugin.plugin.version>snapshot-${maven.build.timestamp}</teamcity.simplePlugin.plugin.version>
-      <teamcity.simplePlugin.plugin.vendorName>Plugin vendor name</teamcity.simplePlugin.plugin.vendorName>
-      <teamcity.simplePlugin.plugin.vendorUrl>Plugin vendor URL</teamcity.simplePlugin.plugin.vendorUrl>
+      <teamcity.teamcity-kotlin-trigger.plugin.version>snapshot-${maven.build.timestamp}</teamcity.teamcity-kotlin-trigger.plugin.version>
+      <teamcity.teamcity-kotlin-trigger.plugin.vendorName>Plugin vendor name</teamcity.teamcity-kotlin-trigger.plugin.vendorName>
+      <teamcity.teamcity-kotlin-trigger.plugin.vendorUrl>Plugin vendor URL</teamcity.teamcity-kotlin-trigger.plugin.vendorUrl>
   </properties>
   <dependencies>
       <dependency>
-           <groupId>com.jetbrains.teamcity.boris.simplePlugin</groupId>
-           <artifactId>simplePlugin-server</artifactId>
+           <groupId>com.jetbrains.teamcity.kotlin.trigger</groupId>
+           <artifactId>teamcity-kotlin-trigger-server</artifactId>
            <version>1.0-SNAPSHOT</version>
       </dependency>
   </dependencies>
@@ -41,15 +41,15 @@
                 <replacements>
                     <replacement>
                         <token>@Version@</token>
-                        <value>${teamcity.simplePlugin.plugin.version}</value>
+                        <value>${teamcity.teamcity-kotlin-trigger.plugin.version}</value>
                     </replacement>
                     <replacement>
                         <token>@VendorName@</token>
-                        <value>${teamcity.simplePlugin.plugin.vendorName}</value>
+                        <value>${teamcity.teamcity-kotlin-trigger.plugin.vendorName}</value>
                     </replacement>
                     <replacement>
                         <token>@VendorURL@</token>
-                        <value>${teamcity.simplePlugin.plugin.vendorUrl}</value>
+                        <value>${teamcity.teamcity-kotlin-trigger.plugin.vendorUrl}</value>
                     </replacement>
                 </replacements>                        
             </configuration>
@@ -65,7 +65,7 @@
                   <goal>single</goal>
                 </goals>
                 <configuration>
-                  <finalName>simplePlugin</finalName>
+                  <finalName>teamcity-kotlin-trigger</finalName>
                   <outputDirectory>${project.parent.build.directory}</outputDirectory>
                   <appendAssemblyId>false</appendAssemblyId>
                   <descriptors>

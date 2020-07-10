@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <teamcity-plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:schemas-jetbrains-com:teamcity-plugin-v1-xml">
   <info>
-    <name>simplePlugin</name>
-    <display-name>Plugin with a simple trigger</display-name>
+    <name>teamcityKotlinTrigger</name>
+    <display-name>TeamCity Kotlin trigger</display-name>
     <version>@Version@</version>
-    <description>My trigger description</description>
+    <description>Remote triggers in Kotlin</description>
     <download-url>Plugin download URL</download-url>
     <email>Plugin author e-mail</email>
     <vendor>

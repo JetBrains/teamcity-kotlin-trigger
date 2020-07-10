@@ -15,7 +15,7 @@
     <moduleSet>
        <useAllReactorProjects>true</useAllReactorProjects>
        <includes>
-           <include>com.jetbrains.teamcity.boris.simplePlugin:simplePlugin-server</include>
+           <include>com.jetbrains.teamcity.kotlin.trigger:teamcity-kotlin-trigger-server</include>
        </includes> 
        <binaries>
            <outputDirectory>server</outputDirectory>
