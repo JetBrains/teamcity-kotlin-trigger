@@ -9,7 +9,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.string.StringDecoder
 import io.netty.util.CharsetUtil
 
-class Server(private val port: Int) {
+internal class Server(private val port: Int) {
     fun run() {
         val bossGroup = NioEventLoopGroup()
         val workerGroup = NioEventLoopGroup()
