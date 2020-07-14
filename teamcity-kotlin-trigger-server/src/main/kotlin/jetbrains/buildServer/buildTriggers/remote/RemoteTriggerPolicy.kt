@@ -3,7 +3,6 @@ package jetbrains.buildServer.buildTriggers.remote
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.buildTriggers.PolledTriggerContext
 import jetbrains.buildServer.buildTriggers.async.AsyncPolledBuildTrigger
-import jetbrains.buildServer.buildTriggers.remote.netty.Actions
 import jetbrains.buildServer.buildTriggers.remote.netty.Client
 import jetbrains.buildServer.buildTriggers.remote.netty.TriggerBuild
 import jetbrains.buildServer.util.TimeService
@@ -12,9 +11,12 @@ import java.util.concurrent.atomic.AtomicReference
 
 private const val host = "localhost"
 private const val port = 8080
+private const val timeout = 10L
+private val timeoutTimeUnit = TimeUnit.SECONDS
 
-class RemoteTriggerPolicy(private val myTimeService: TimeService) : AsyncPolledBuildTrigger {
+class RemoteTriggerPolicy(myTimeService: TimeService) : AsyncPolledBuildTrigger {
     private val myLogger = Logger.getInstance(RemoteTriggerPolicy::class.qualifiedName)
+    private val myTriggerUtil = TriggerUtil(myTimeService)
     private var myActionReference: AtomicReference<Actions?> = AtomicReference(null)
 
     private var myCurrVal: Int = 1
@@ -24,10 +26,8 @@ class RemoteTriggerPolicy(private val myTimeService: TimeService) : AsyncPolledB
         if (actionsIfNotOutdated() == null) {
             myLogger.debug("Trigger activation initialized a new connection")
             myActionReference.set(
-                Client(
-                    host,
-                    port
-                ).run())
+                Client(host, port).run()
+            )
         }
     }
 
@@ -41,10 +41,7 @@ class RemoteTriggerPolicy(private val myTimeService: TimeService) : AsyncPolledB
 
         val actions = actionsIfNotOutdated() ?: run {
             myLogger.debug("triggerBuild() initialized a new connection")
-            Client(
-                host,
-                port
-            ).run()
+            Client(host, port).run()
         }
         if (actions == null) {
             myLogger.error("Could not send triggerBuild() request: no connection")
@@ -53,16 +50,14 @@ class RemoteTriggerPolicy(private val myTimeService: TimeService) : AsyncPolledB
         myActionReference.set(actions)
 
         if (!myRequestSent) {
-            val contextSubset = prepareContextSubset(context)
+            val contextSubset = myTriggerUtil.contextSubset(context)
             actions.fireEvent(
-                TriggerBuild(
-                    contextSubset
-                )
+                TriggerBuild(contextSubset)
             )
             myRequestSent = true
         }
 
-        val answer = actions.awaitRead(5, TimeUnit.SECONDS)
+        val answer = actions.awaitRead(myTriggerUtil.triggerId(context), timeout, timeoutTimeUnit)
         if (answer == null) {
             myLogger.debug("Request timed out, will retry with next triggerBuild() invocation")
             myRequestSent = false
@@ -70,10 +65,10 @@ class RemoteTriggerPolicy(private val myTimeService: TimeService) : AsyncPolledB
         }
 
         if (answer) {
-            val currentTime = getCurrentTime()
+            val currentTime = myTriggerUtil.getCurrentTime()
             val name = context.triggerDescriptor.buildTriggerService.name
             context.buildType.addToQueue("$name $currentTime")
-            setPreviousCallTime(currentTime, context)
+            myTriggerUtil.setPreviousCallTime(currentTime, context)
         }
 
         val rv = myCurrVal++
@@ -87,32 +82,6 @@ class RemoteTriggerPolicy(private val myTimeService: TimeService) : AsyncPolledB
             null
         } else it
     }
-
-    private fun prepareContextSubset(context: PolledTriggerContext): Map<String, String> {
-        val properties = context.triggerDescriptor.properties
-
-        return mapOf(
-            Constants.Request.ENABLE to getEnable(
-                properties
-            ).toString(),
-            Constants.Request.DELAY to getDelay(
-                properties
-            ).toString(),
-            Constants.Request.PREVIOUS_CALL_TIME to getPreviousCallTime(context).toString(),
-            Constants.Request.CURRENT_TIME to getCurrentTime().toString()
-        )
-    }
-
-    private fun setPreviousCallTime(time: Long, context: PolledTriggerContext) {
-        context.customDataStorage.putValue(Constants.Request.PREVIOUS_CALL_TIME, time.toString())
-    }
-
-    private fun getPreviousCallTime(context: PolledTriggerContext) =
-        context.customDataStorage
-            .getValue(Constants.Request.PREVIOUS_CALL_TIME)
-            ?.toLongOrNull()
-
-    private fun getCurrentTime() = myTimeService.now()
 
     override fun getPollInterval(ctx: PolledTriggerContext) = 30
 }

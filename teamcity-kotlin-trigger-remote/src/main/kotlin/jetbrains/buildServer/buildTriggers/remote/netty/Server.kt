@@ -24,11 +24,7 @@ internal class Server(private val myPort: Int) {
                             .addLast(stringCodec())
                             .addLast(JsonCodec())
                             .addLast(ServerChannelHandler())
-                            .addLast(
-                                ServerExceptionHandler(
-                                    myLogger
-                                )
-                            )
+                            .addLast(ServerExceptionHandler(myLogger))
                     }
                 })
                 .option(ChannelOption.SO_BACKLOG, 128)

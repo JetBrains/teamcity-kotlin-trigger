@@ -9,7 +9,7 @@ import io.netty.channel.ChannelOption
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
-import java.util.concurrent.TimeUnit
+import jetbrains.buildServer.buildTriggers.remote.Actions
 import kotlin.concurrent.thread
 
 internal class Client(private val myHost: String, private val myPort: Int) {
@@ -37,11 +37,7 @@ internal class Client(private val myHost: String, private val myPort: Int) {
 
                         channel.attr(setActionsAttributeKey)
                             .set { fireEvent, awaitRead, closeConnection ->
-                                actions = Actions(
-                                    fireEvent,
-                                    awaitRead,
-                                    closeConnection
-                                )
+                                actions = Actions(fireEvent, awaitRead, closeConnection)
                                 actionsAvailable.release()
                             }
                     }
@@ -62,12 +58,4 @@ internal class Client(private val myHost: String, private val myPort: Int) {
         actionsAvailable.acquire()
         return actions
     }
-}
-
-internal class Actions(
-    val fireEvent: (Event) -> Unit,
-    val awaitRead: (Long, TimeUnit) -> Boolean?,
-    val closeConnection: () -> Unit
-) {
-    var outdated: Boolean = false
 }

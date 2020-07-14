@@ -19,29 +19,38 @@ internal class ServerChannelHandler : ChannelInboundHandlerAdapter() {
 
     @Suppress("UNCHECKED_CAST")
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
+        val dataMap = msg as Map<String, String>
+        val response = mutableMapOf<String, String>()
+
+        val id = dataMap[Constants.TRIGGER_ID]
+        if (id == null) {
+            response[Constants.Response.ERROR] = "Request contains no trigger id"
+            ctx.writeAndFlush(response)
+            return
+        }
+        response[Constants.TRIGGER_ID] = id
+
         if (!this::myTrigger.isInitialized) {
-            val response = mapOf(Constants.Response.ERROR to "Server is in an improper state: trigger is not loaded")
+            response[Constants.Response.ERROR] = "Server is in an improper state: trigger is not loaded"
             ctx.writeAndFlush(response).addListener {
                 ctx.fireExceptionCaught(IllegalStateException("Trigger is not loaded"))
             }
             return
         }
 
-        val dataMap = msg as Map<String, String>
         val answer = try {
             myTrigger.triggerBuild(dataMap)
         } catch (e: Exception) {
-            val response =
-                mapOf(Constants.Response.ERROR to "Trigger ${myTrigger::class.qualifiedName} caused an exception: \"$e\"")
+            response[Constants.Response.ERROR] = "Trigger ${myTrigger::class.qualifiedName} caused an exception: \"$e\""
             ctx.writeAndFlush(response).addListener {
                 ctx.fireExceptionCaught(e)
             }
             return
         }
 
-        val response = mapOf(Constants.Response.ANSWER to answer.toString())
+        response[Constants.Response.ANSWER] = answer.toString()
         ctx.writeAndFlush(response)
-        myLogger.info(ctx.channel().createLogMessage("Sending response: $answer"))
+        myLogger.info(ctx.channel().createLogMessage("Sending response to a trigger $id: $answer"))
     }
 }
 

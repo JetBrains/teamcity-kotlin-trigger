@@ -6,46 +6,69 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.util.AttributeKey
 import io.netty.util.ReferenceCountUtil
+import jetbrains.buildServer.buildTriggers.remote.AwaitReadAction
+import jetbrains.buildServer.buildTriggers.remote.CloseConnectionAction
 import jetbrains.buildServer.buildTriggers.remote.Constants
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
-
-private const val MAX_QUEUE_SIZE = 100
+import jetbrains.buildServer.buildTriggers.remote.FireEventAction
+import java.util.concurrent.ConcurrentHashMap
 
 internal val setActionsAttributeKey = AttributeKey.newInstance<(
-        (Event) -> Unit,
-        (Long, TimeUnit) -> Boolean?,
-        () -> Unit
+    FireEventAction,
+    AwaitReadAction,
+    CloseConnectionAction
 ) -> Unit>("setActions")
 
 internal class ClientChannelHandler : ChannelInboundHandlerAdapter() {
     private val myLogger = Logger.getInstance(ClientChannelHandler::class.qualifiedName)
-    private val myAnswerQueue = LinkedBlockingQueue<Boolean>(MAX_QUEUE_SIZE)
+    private val myAnswerByTriggerIdMap = ConcurrentHashMap<String, BlockingValueHolder<Boolean>>()
 
     override fun channelActive(ctx: ChannelHandlerContext) {
-        ctx.channel().attr(setActionsAttributeKey).get()
-            .invoke({ ctx.fireUserEventTriggered(it) },
-                myAnswerQueue::poll,
-                { ctx.close() })
+        val awaitReadAction: AwaitReadAction = { id, timeoutDuration, timeUnit ->
+            synchronized(myAnswerByTriggerIdMap) {
+                answerHolderByTriggerId(id).getAndRemove(timeoutDuration, timeUnit)
+            }
+        }
+
+        ctx.channel()
+            .attr(setActionsAttributeKey)
+            .get()
+            .invoke(
+                { ctx.fireUserEventTriggered(it) },
+                awaitReadAction,
+                { ctx.close() }
+            )
     }
 
-    // TODO: consider introducing time limit for put() operation or some other handling of queue size overflow
     @Suppress("UNCHECKED_CAST")
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         try {
-            val answerMap = msg as Map<String, String>
+            val response = msg as Map<String, String>
 
-            if (answerMap.containsKey(Constants.Response.ERROR))
+            if (response.containsKey(Constants.Response.ERROR))
                 myLogger.warn(
                     ctx.channel()
-                        .createLogMessage("Server responded with an error: ${answerMap[Constants.Response.ERROR]}")
+                        .createLogMessage("Server responded with an error: ${response[Constants.Response.ERROR]}")
                 )
 
-            val answer = answerMap[Constants.Response.ANSWER]
-            myAnswerQueue.put(answer?.toBoolean() ?: false)
+            val answer = response[Constants.Response.ANSWER]
+            val triggerId = response[Constants.TRIGGER_ID] ?: run {
+                myLogger.error(
+                    ctx.channel().createLogMessage("Server response does not contain target trigger id")
+                )
+                return
+            }
+
+            answerHolderByTriggerId(triggerId).set(answer?.toBoolean() ?: false)
         } finally {
             ReferenceCountUtil.release(msg)
         }
+    }
+
+    private fun answerHolderByTriggerId(id: String): BlockingValueHolder<Boolean> {
+        val answerHolder = myAnswerByTriggerIdMap[id] ?: BlockingValueHolder()
+        if (!myAnswerByTriggerIdMap.containsKey(id))
+            myAnswerByTriggerIdMap[id] = answerHolder
+        return answerHolder
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
