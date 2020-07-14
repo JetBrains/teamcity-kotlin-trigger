@@ -1,6 +1,10 @@
-package com.jetbrains.teamcity.kotlin.trigger.compiled
+package jetbrains.buildServer.buildTriggers.remote.compiled
 
-import com.jetbrains.teamcity.kotlin.trigger.*
+import jetbrains.buildServer.buildTriggers.remote.*
+import jetbrains.buildServer.buildTriggers.remote.Constants.Request.ENABLE
+import jetbrains.buildServer.buildTriggers.remote.Constants.Request.DELAY
+import jetbrains.buildServer.buildTriggers.remote.Constants.Request.CURRENT_TIME
+import jetbrains.buildServer.buildTriggers.remote.Constants.Request.PREVIOUS_CALL_TIME
 
 class TriggerImpl: Trigger {
     override fun triggerBuild(context: Map<String, String>): Boolean {

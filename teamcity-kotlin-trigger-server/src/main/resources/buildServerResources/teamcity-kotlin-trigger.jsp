@@ -1,6 +1,5 @@
 <%@ include file="/include.jsp" %>
-<%@ page import="jetbrains.buildServer.util.StringUtil" %>
-<%@ page import="com.jetbrains.teamcity.kotlin.trigger.RemoteTriggerServiceKt" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.Constants" %>
 <%@ taglib prefix="props" tagdir="/WEB-INF/tags/props" %>
 <jsp:useBean id="propertiesBean" type="jetbrains.buildServer.controllers.BasePropertiesBean" scope="request"/>
 
@@ -11,24 +10,20 @@
 </tr>
 <tr>
     <td>
-        <props:checkboxProperty name="<%=RemoteTriggerServiceKt.ENABLE%>"
+        <props:checkboxProperty name="<%=Constants.Request.ENABLE%>"
                                 onclick="window.SimpleTrigger.checkboxUpdate(this);"/>
-        <label for="<%=RemoteTriggerServiceKt.ENABLE%>">Enable trigger</label>
+        <label for="<%=Constants.Request.ENABLE%>">Enable trigger</label>
         <span class="smallNote">
           consider turning this flag off in case you are tired of this trigger<br/>
         </span>
-        <span class="error" id="error_<%=RemoteTriggerServiceKt.ENABLE%>"></span>
+        <span class="error" id="error_<%=Constants.Request.ENABLE%>"></span>
     </td>
 </tr>
-<tr class="delay"
-        <% if (!StringUtil.isTrue(propertiesBean.getProperties().get(RemoteTriggerServiceKt.ENABLE))) { %>
-    style="display: none"
-        <% } %>
->
+<tr id="delay">
     <td>
-        <label for="<%=RemoteTriggerServiceKt.DELAY%>">Delay, m:</label>
-        <props:textProperty name="<%=RemoteTriggerServiceKt.DELAY%>"/>
-        <span class="error" id="error_<%=RemoteTriggerServiceKt.DELAY%>"></span>
+        <label for="<%=Constants.Request.DELAY%>">Delay, m:</label>
+        <props:textProperty name="<%=Constants.Request.DELAY%>"/>
+        <span class="error" id="error_<%=Constants.Request.DELAY%>"></span>
     </td>
 </tr>
 
@@ -36,10 +31,13 @@
     window.SimpleTrigger = {
         checkboxUpdate: function (checkbox) {
             if (checkbox.checked) {
-                $j('.delay').show();
+                $j('#delay').show();
             } else {
-                $j('.delay').hide();
+                $j('#delay').hide();
             }
         }
+    }
+    if (!$j('#<%=Constants.Request.ENABLE%>').checked) {
+        $j('#delay').hide();
     }
 </script>

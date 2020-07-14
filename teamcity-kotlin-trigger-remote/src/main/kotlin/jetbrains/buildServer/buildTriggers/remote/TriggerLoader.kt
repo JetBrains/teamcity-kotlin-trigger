@@ -1,6 +1,6 @@
-package com.jetbrains.teamcity.kotlin.trigger
+package jetbrains.buildServer.buildTriggers.remote
 
-internal const val triggerPath = "com.jetbrains.teamcity.kotlin.trigger.compiled.TriggerImpl"
+internal const val triggerPath = "jetbrains.buildServer.buildTriggers.remote.compiled.TriggerImpl"
 
 object TriggerLoader {
     internal fun loadTrigger(): Trigger {
