@@ -10,7 +10,7 @@ internal class TriggerUtil(private val myTimeService: TimeService) {
         val properties = context.triggerDescriptor.properties
 
         return mapOf(
-            Constants.TRIGGER_ID to context.triggerDescriptor.id,
+//            Constants.TRIGGER_ID to context.triggerDescriptor.id,
             Constants.Request.ENABLE to getEnable(properties).toString(),
             Constants.Request.DELAY to getDelay(properties).toString(),
             Constants.Request.PREVIOUS_CALL_TIME to getPreviousCallTime(context).toString(),

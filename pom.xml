@@ -27,7 +27,12 @@
             <id>JetBrains</id>
             <url>https://download.jetbrains.com/teamcity-repository</url>
         </repository>
+        <repository>
+            <id>jcenter</id>
+            <url>https://jcenter.bintray.com</url>
+        </repository>
     </repositories>
+
     <pluginRepositories>
         <pluginRepository>
             <id>JetBrains</id>

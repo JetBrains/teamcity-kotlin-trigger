@@ -6,7 +6,7 @@ import jetbrains.buildServer.buildTriggers.remote.Constants.Request.DELAY
 import jetbrains.buildServer.buildTriggers.remote.Constants.Request.CURRENT_TIME
 import jetbrains.buildServer.buildTriggers.remote.Constants.Request.PREVIOUS_CALL_TIME
 
-class TriggerImpl: Trigger {
+class ScheduleTrigger : Trigger {
     override fun triggerBuild(context: Map<String, String>): Boolean {
         val enableStr = context[ENABLE] ?: return false
         val delayStr = context[DELAY] ?: return false
