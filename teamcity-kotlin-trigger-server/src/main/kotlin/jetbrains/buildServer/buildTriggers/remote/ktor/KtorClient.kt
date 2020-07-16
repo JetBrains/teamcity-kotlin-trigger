@@ -17,6 +17,8 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.network.sockets.ConnectTimeoutException
 import jetbrains.buildServer.buildTriggers.remote.Constants
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -31,34 +33,36 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
     var outdated = false
         private set
 
-    fun sendTriggerBuild(context: Map<String, String>): Boolean? = runBlocking {
-        try {
-            val response = client.post<Map<String, String>> { body = context }
+    fun sendTriggerBuildAsync(context: Map<String, String>): Deferred<Boolean?> = runBlocking {
+        async {
+            try {
+                val response = client.post<Map<String, String>> { body = context }
 
-            if (response.containsKey(Constants.Response.ERROR))
-                myLogger.warn("Server responded with an error: ${response[Constants.Response.ERROR]}")
+                if (response.containsKey(Constants.Response.ERROR))
+                    myLogger.warn("Server responded with an error: ${response[Constants.Response.ERROR]}")
 
-            response[Constants.Response.ANSWER]?.toBoolean() ?: run {
-                myLogger.warn("Server response does not contain the ${Constants.Response.ANSWER} field")
+                response[Constants.Response.ANSWER]?.toBoolean() ?: run {
+                    myLogger.warn("Server response does not contain the ${Constants.Response.ANSWER} field")
+                    null
+                }
+            } catch (e: Exception) {
+                when (e) {
+                    is ConnectTimeoutException ->
+                        myLogger.error("Connection timed out to $myHost:$myPort")
+                    is HttpRequestTimeoutException ->
+                        myLogger.error("Request timed out to $myHost:$myPort")
+                    is ServerResponseException -> // status code 5**
+                        myLogger.error("Server $myHost:$myPort failed to respond", e)
+                    is ClientEngineClosedException ->
+                        myLogger.error("Tried to use already closed connection to $myHost:$myPort")
+                    is IOException -> {
+                        myLogger.error("Connection closed to $myHost:$myPort", e)
+                        client.close()
+                        outdated = true
+                    }
+                }
                 null
             }
-        } catch (e: Exception) {
-            when (e) {
-                is ConnectTimeoutException ->
-                    myLogger.error("Connection timed out to $myHost:$myPort")
-                is HttpRequestTimeoutException ->
-                    myLogger.error("Request timed out to $myHost:$myPort")
-                is ServerResponseException -> // status code 5**
-                    myLogger.error("Server $myHost:$myPort failed to respond", e)
-                is ClientEngineClosedException ->
-                    myLogger.error("Tried to use already closed connection to $myHost:$myPort")
-                is IOException -> {
-                    myLogger.error("Connection closed to $myHost:$myPort", e)
-                    client.close()
-                    outdated = true
-                }
-            }
-            null
         }
     }
 

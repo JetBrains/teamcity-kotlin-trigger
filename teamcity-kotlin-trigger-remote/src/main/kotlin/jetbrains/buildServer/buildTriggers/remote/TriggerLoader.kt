@@ -1,13 +1,17 @@
 package jetbrains.buildServer.buildTriggers.remote
 
-internal const val triggerPath = "jetbrains.buildServer.buildTriggers.remote.compiled.TriggerImpl"
+import java.net.URLClassLoader
+
+internal const val triggerClass = "jetbrains.buildServer.buildTriggers.remote.compiled.ScheduleTrigger"
+internal val triggerPath = ClassLoader.getSystemResource("ScheduleTrigger.jar")
 
 object TriggerLoader {
     internal fun loadTrigger(): Trigger {
-        val triggerClass = Class.forName(triggerPath)
+        val urlClassLoader = URLClassLoader(arrayOf(triggerPath))
+        val triggerClass = Class.forName(triggerClass, true, urlClassLoader)
 
         if (!Trigger::class.java.isAssignableFrom(triggerClass))
-            throw ClassCastException("$triggerPath cannot be cast to ${Trigger::class.qualifiedName}")
+            throw ClassCastException("$triggerClass cannot be cast to ${Trigger::class.qualifiedName}")
 
         val instance = triggerClass.getDeclaredConstructor().newInstance()
         return instance as Trigger
