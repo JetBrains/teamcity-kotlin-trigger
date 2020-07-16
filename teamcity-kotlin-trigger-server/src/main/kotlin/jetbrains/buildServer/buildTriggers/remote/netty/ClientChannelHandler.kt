@@ -10,7 +10,6 @@ import jetbrains.buildServer.buildTriggers.remote.AwaitReadAction
 import jetbrains.buildServer.buildTriggers.remote.CloseConnectionAction
 import jetbrains.buildServer.buildTriggers.remote.Constants
 import jetbrains.buildServer.buildTriggers.remote.FireEventAction
-import java.util.concurrent.ConcurrentHashMap
 
 internal val setActionsAttributeKey = AttributeKey.newInstance<(
     FireEventAction,
@@ -20,7 +19,7 @@ internal val setActionsAttributeKey = AttributeKey.newInstance<(
 
 internal class ClientChannelHandler : ChannelInboundHandlerAdapter() {
     private val myLogger = Logger.getInstance(ClientChannelHandler::class.qualifiedName)
-    private val myAnswerByTriggerIdMap = ConcurrentHashMap<String, BlockingValueHolder<Boolean>>()
+    private val myAnswerByTriggerIdMap = mutableMapOf<String, BlockingValueHolder<Boolean>>()
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         val awaitReadAction: AwaitReadAction = { id, timeoutDuration, timeUnit ->

@@ -9,9 +9,8 @@ import java.util.concurrent.TimeUnit
 internal class BlockingValueHolder<T> {
     private val myBlockingQueue = LinkedBlockingQueue<T>(1)
 
-    fun getAndRemove(timeout: Long, timeUnit: TimeUnit = TimeUnit.MILLISECONDS): T? = synchronized(this) {
+    fun getAndRemove(timeout: Long, timeUnit: TimeUnit = TimeUnit.MILLISECONDS): T? =
         myBlockingQueue.poll(timeout, timeUnit)
-    }
 
     /**
      * @return Previous value if it was present, new value if not
