@@ -26,9 +26,9 @@ class RemoteTriggerService(
 
     override fun describeTrigger(buildTriggerDescriptor: BuildTriggerDescriptor): String {
         val properties = buildTriggerDescriptor.properties
-        if (!getEnable(properties)) return "Does nothing (edit configurations to activate it)"
+        if (!TriggerUtil.getEnable(properties)) return "Does nothing (edit configurations to activate it)"
 
-        val delay = getDelay(properties)
+        val delay = TriggerUtil.getDelay(properties)
         if (delay == null || delay <= 0) return "Incorrect state: wrong delay"
 
         val period =
@@ -41,18 +41,22 @@ class RemoteTriggerService(
 
     override fun getTriggerPropertiesProcessor() =
         PropertiesProcessor { properties: Map<String, String> ->
-            val enable = getEnable(properties)
-            val delay = getDelay(properties)
+            val enable = TriggerUtil.getEnable(properties)
+            val delay = TriggerUtil.getDelay(properties)
+            val triggerPolicy = properties["triggerPolicy"]
 
-            if (enable && (delay == null || delay <= 0)) {
-                listOf(InvalidProperty(Constants.Request.DELAY, "Specify a correct delay, please"))
-            } else emptyList()
+            val rv = mutableListOf<InvalidProperty>()
+
+            if (enable && (delay == null || delay <= 0))
+                rv.add(InvalidProperty(Constants.Request.DELAY, "Specify a correct delay, please"))
+            if (triggerPolicy.isNullOrBlank())
+                rv.add(InvalidProperty("triggerPolicy", "A trigger policy must be specified"))
+
+            rv
         }
 
-    override fun getEditParametersUrl() = myPluginDescriptor.getPluginResourcesPath("teamcity-kotlin-trigger.jsp")
+    override fun getEditParametersUrl() = myPluginDescriptor.getPluginResourcesPath("remoteTriggerController.html")
+
     override fun isMultipleTriggersPerBuildTypeAllowed() = true
     override fun getBuildTriggeringPolicy() = myPolicy
 }
-
-internal fun getEnable(properties: Map<String, String>) = StringUtil.isTrue(properties[Constants.Request.ENABLE])
-internal fun getDelay(properties: Map<String, String>) = properties[Constants.Request.DELAY]?.toIntOrNull()
