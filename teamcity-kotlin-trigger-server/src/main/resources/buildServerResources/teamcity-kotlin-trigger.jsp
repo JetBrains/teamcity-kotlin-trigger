@@ -13,32 +13,32 @@
 </tr>
 <tr>
     <td>
-        <props:checkboxProperty name="<%=Constants.Request.ENABLE%>"
+        <props:checkboxProperty name="<%=Constants.ENABLE%>"
                                 onclick="window.SimpleTrigger.checkboxUpdate(this);"/>
-        <label for="<%=Constants.Request.ENABLE%>">Enable trigger</label>
+        <label for="<%=Constants.ENABLE%>">Enable trigger</label>
         <span class="smallNote">
           consider turning this flag off in case you are tired of this trigger<br/>
         </span>
-        <span class="error" id="error_<%=Constants.Request.ENABLE%>"></span>
+        <span class="error" id="error_<%=Constants.ENABLE%>"></span>
     </td>
 </tr>
 <tr>
     <td>
-        <label for="triggerPolicy">Triggering policy:</label>
-        <props:selectProperty name="triggerPolicy">
+        <label for="<%=Constants.TRIGGER_POLICY%>">Triggering policy:</label>
+        <props:selectProperty name="<%=Constants.TRIGGER_POLICY%>">
             <props:option value="">-- Choose a triggering policy --</props:option>
             <c:forEach items="${remoteTriggersBean.fileNames}" var="fileName">
                 <props:option value="${remoteTriggersBean.getFullPathTo(fileName)}">${fileName}</props:option>
             </c:forEach>
         </props:selectProperty>
-        <span class="error" id="error_triggerPolicy"></span>
+        <span class="error" id="error_<%=Constants.TRIGGER_POLICY%>"></span>
     </td>
 </tr>
 <tr id="delay">
     <td>
-        <label for="<%=Constants.Request.DELAY%>">Delay, m:</label>
-        <props:textProperty name="<%=Constants.Request.DELAY%>"/>
-        <span class="error" id="error_<%=Constants.Request.DELAY%>"></span>
+        <label for="<%=Constants.DELAY%>">Delay, m:</label>
+        <props:textProperty name="<%=Constants.DELAY%>"/>
+        <span class="error" id="error_<%=Constants.DELAY%>"></span>
     </td>
 </tr>
 
@@ -52,7 +52,7 @@
             }
         }
     }
-    if (!$j('#<%=Constants.Request.ENABLE%>').checked) {
+    if (!$j('#<%=Constants.ENABLE%>').checked) {
         $j('#delay').hide();
     }
 </script>

@@ -33,7 +33,7 @@
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-gson</artifactId>
+            <artifactId>ktor-jackson</artifactId>
             <version>${ktor.version}</version>
         </dependency>
     </dependencies>

@@ -7,7 +7,7 @@ import io.ktor.client.features.HttpRequestTimeoutException
 import io.ktor.client.features.HttpTimeout
 import io.ktor.client.features.ServerResponseException
 import io.ktor.client.features.defaultRequest
-import io.ktor.client.features.json.GsonSerializer
+import io.ktor.client.features.json.JacksonSerializer
 import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.request.accept
 import io.ktor.client.request.host
@@ -16,9 +16,8 @@ import io.ktor.client.request.request
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.network.sockets.ConnectTimeoutException
-import jetbrains.buildServer.buildTriggers.remote.Constants
-import jetbrains.buildServer.buildTriggers.remote.Mapping
-import jetbrains.buildServer.buildTriggers.remote.RequestMapping
+import jetbrains.buildServer.buildTriggers.remote.*
+import jetbrains.buildServer.buildTriggers.remote.jackson.TypeValidator
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -32,34 +31,34 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
     var outdated = false
         private set
 
-    suspend fun sendTriggerBuild(triggerName: String, context: Map<String, String>): Boolean? =
+    suspend fun sendTriggerBuild(triggerName: String, request: TriggerBuildRequest): Boolean? =
         makeRequest(
             RequestMapping.triggerBuild(triggerName),
-            context,
-            @Suppress("USELESS_CAST") { null as Boolean? } // without this cast makeRequest will infer Nothing? type
-        ) { response: Map<String, String> ->
-            if (response.containsKey(Constants.Response.ERROR))
-                myLogger.warn("Server responded with an error: ${response[Constants.Response.ERROR]}")
+            request,
+            { null }
+        ) { response: Response ->
+            if (response is TriggerBuildResponse) return response.answer
 
-            response[Constants.Response.ANSWER]?.toBoolean() ?: run {
-                myLogger.warn("Server response does not contain the ${Constants.Response.ANSWER} field")
-                null
+            when (response) {
+                is ErroneousResponse -> throw response.error
+                else -> myLogger.error("Server response type is invalid: $response")
             }
+            null
         }
 
-    suspend fun uploadTrigger(triggerName: String, trigger: ByteArray): Boolean =
+    suspend fun uploadTrigger(triggerName: String, request: UploadTriggerRequest): Boolean =
         makeRequest(
             RequestMapping.uploadTrigger(triggerName),
-            trigger,
+            request,
             { false }
-        ) { response: Map<String, String> ->
-            if (response.containsKey(Constants.Response.ERROR))
-                myLogger.warn("Server responded with an error: ${response[Constants.Response.ERROR]}")
+        ) { response: Response ->
+            if (response is UploadTriggerResponse) return true
 
-            response[Constants.Response.ANSWER]?.toBoolean() ?: run {
-                myLogger.warn("Server response does not contain the ${Constants.Response.ANSWER} field")
-                false
+            when (response) {
+                is ErroneousResponse -> myLogger.error("Server responded with an error: $response")
+                else -> myLogger.error("Server response type is invalid: $response")
             }
+            false
         }
 
     fun closeConnection() {
@@ -69,13 +68,13 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
         outdated = true
     }
 
-    private suspend inline fun <T, reified E> makeRequest(
+    private suspend inline fun <T, Req : Request, reified Resp : Response> makeRequest(
         mapping: Mapping,
-        body: Any,
+        body: Req,
         onError: (Throwable) -> T,
-        onSuccess: (E) -> T
+        onSuccess: (Resp) -> T
     ): T = try {
-        val response = client.request<E>(mapping.path) {
+        val response = client.request<Resp>(mapping.path) {
             method = mapping.httpMethod
             this.body = body
         }
@@ -95,6 +94,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
                 client.close()
                 outdated = true
             }
+            else -> throw e
         }
         onError(e)
     }
@@ -107,7 +107,9 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
             contentType(ContentType.Application.Json)
         }
         install(JsonFeature) {
-            serializer = GsonSerializer()
+            serializer = JacksonSerializer {
+                activateDefaultTyping(TypeValidator.myTypeValidator)
+            }
         }
         install(HttpTimeout) {
             connectTimeoutMillis = timeUnit.toMillis(connectTimeout)

@@ -1,19 +1,18 @@
 KC = ${KOTLIN_HOME}\kotlinc
 DOMAIN = jetbrains\buildServer\buildTriggers\remote
-TRIGGER = ..\main\kotlin\$(DOMAIN)\Trigger.kt
-CONSTANTS = ..\..\..\teamcity-kotlin-trigger-common\src\main\kotlin\$(DOMAIN)\Constants.kt
+IMPORTS = ..\main\kotlin\$(DOMAIN)\Trigger.kt ..\..\..\teamcity-kotlin-trigger-common\src\main\kotlin\$(DOMAIN)\Request.kt
 OUT = ..\main\resources
 
 .PHONY: clearUnnecessary
 
 package: ScheduleTrigger.jar DemandTrigger.jar ErroneousTrigger.jar
 
-%.jar: %.kt $(TRIGGER) $(CONSTANTS)
+%.jar: %.kt $(IMPORTS)
 	$(KC) $^ -d $(OUT)\$@
 
 compile: doCompile clearUnnecessary
 
-doCompile: ScheduleTrigger.kt DemandTrigger.kt ErroneousTrigger.kt $(TRIGGER) $(CONSTANTS)
+doCompile: ScheduleTrigger.kt DemandTrigger.kt ErroneousTrigger.kt $(IMPORTS)
 	$(KC) $^ -d $(OUT)
 
 

@@ -1,12 +1,12 @@
 package jetbrains.buildServer.buildTriggers.remote
 
-import io.ktor.http.HttpMethod
+sealed class Request
 
-data class Request(val context: Map<String, String>)
+class TriggerBuildRequest(
+    val enable: Boolean,
+    val delay: Int,
+    val previousCallTime: Long?,
+    val currentTime: Long
+): Request()
 
-object RequestMapping {
-    fun triggerBuild(triggerName: String) = Mapping("/trigger/$triggerName", HttpMethod.Post)
-    fun uploadTrigger(triggerName: String) = Mapping("/trigger/$triggerName", HttpMethod.Put)
-}
-
-data class Mapping(val path: String, val httpMethod: HttpMethod)
+class UploadTriggerRequest(val triggerBody: ByteArray): Request()

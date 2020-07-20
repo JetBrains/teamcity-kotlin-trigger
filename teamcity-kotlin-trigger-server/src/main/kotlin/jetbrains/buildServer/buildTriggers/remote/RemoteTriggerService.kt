@@ -43,14 +43,14 @@ class RemoteTriggerService(
         PropertiesProcessor { properties: Map<String, String> ->
             val enable = TriggerUtil.getEnable(properties)
             val delay = TriggerUtil.getDelay(properties)
-            val triggerPolicy = properties["triggerPolicy"]
+            val triggerPolicy = properties[Constants.TRIGGER_POLICY]
 
             val rv = mutableListOf<InvalidProperty>()
 
             if (enable && (delay == null || delay <= 0))
-                rv.add(InvalidProperty(Constants.Request.DELAY, "Specify a correct delay, please"))
+                rv.add(InvalidProperty(Constants.DELAY, "Specify a correct delay, please"))
             if (triggerPolicy.isNullOrBlank())
-                rv.add(InvalidProperty("triggerPolicy", "A trigger policy must be specified"))
+                rv.add(InvalidProperty(Constants.TRIGGER_POLICY, "A trigger policy must be specified"))
 
             rv
         }

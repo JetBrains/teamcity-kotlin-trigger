@@ -1,21 +1,21 @@
 package jetbrains.buildServer.buildTriggers.remote.ktor
 
+import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
-import io.ktor.gson.gson
+import io.ktor.jackson.jackson
+import io.ktor.request.ContentTransformationException
 import io.ktor.request.receive
 import io.ktor.response.respond
-import io.ktor.routing.post
-import io.ktor.routing.put
+import io.ktor.routing.Routing
+import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
-import jetbrains.buildServer.buildTriggers.remote.Constants
-import jetbrains.buildServer.buildTriggers.remote.Request
-import jetbrains.buildServer.buildTriggers.remote.Trigger
-import jetbrains.buildServer.buildTriggers.remote.TriggerManager
-import java.io.IOException
+import io.ktor.util.pipeline.PipelineContext
+import jetbrains.buildServer.buildTriggers.remote.*
+import jetbrains.buildServer.buildTriggers.remote.jackson.TypeValidator
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -27,64 +27,76 @@ class KtorServer(private val myHost: String, private val myPort: Int) {
         server.start(wait = true)
     }
 
+    private fun Routing.handleRoute(
+        mapping: Mapping,
+        block: suspend PipelineContext<Unit, ApplicationCall>.(Unit) -> Unit
+    ) = route(mapping.path, mapping.httpMethod) {
+        handle(block)
+    }
+
     private fun createServer() = embeddedServer(Netty, host = myHost, port = myPort) {
         install(ContentNegotiation) {
-            gson { }
+            jackson {
+                activateDefaultTyping(TypeValidator.myTypeValidator)
+            }
         }
-
         routing {
-            post("/trigger/{triggerName}") {
-                val requestMap = call.receive<Request>().context
-                val triggerName = call.parameters["triggerName"]
-                val response = mutableMapOf<String, String>()
+            handleRoute(RequestMapping.triggerBuild("{triggerName}")) {
+                defaultServerRespond {
+                    val request = try {
+                        call.receive<TriggerBuildRequest>()
+                    } catch (e: ContentTransformationException) {
+                        throw ContentTypeMismatch(e)
+                    }
 
-                if (triggerName == null) {
-                    response[Constants.Response.ERROR] = "No trigger name specified for POST request"
-                    call.respond(response)
-                    return@post
-                }
+                    val triggerName = call.parameters["triggerName"] ?: throw NoTriggerNameError()
 
-                val myTrigger: Trigger
-                try {
-                    myTrigger = TriggerManager.loadTrigger(triggerName)
-                } catch (e: Exception) {
-                    // TODO: handle
-                    return@post
-                }
+                    val myTrigger = try {
+                        TriggerManager.loadTrigger(triggerName)
+                    } catch (e: TriggerManager.TriggerDoesNotExistException) {
+                        throw TriggerDoesNotExistError(triggerName)
+                    } catch (e: Exception) {
+                        throw TriggerLoadingError(e)
+                    }
 
-                try {
-                    val answer = myTrigger.triggerBuild(requestMap)
-                    response[Constants.Response.ANSWER] = answer.toString()
+                    val answer = try {
+                        myTrigger.triggerBuild(request)
+                    } catch (e: Exception) {
+                        throw InternalTriggerError(e)
+                    }
+
                     myLogger.info("Sending response: $answer")
-                } catch (e: Exception) {
-                    val msg = "Trigger ${myTrigger::class.qualifiedName} caused an exception: \"$e\""
-                    myLogger.log(Level.SEVERE, msg, e)
-                    response[Constants.Response.ERROR] = msg
+                    TriggerBuildResponse(answer)
                 }
-
-                call.respond(response)
             }
 
-            put("/trigger/{triggerName}") {
-                val triggerBytes = call.receive<ByteArray>()
-                val triggerName = call.parameters["triggerName"]
-                val response = mutableMapOf<String, String>()
+            handleRoute(RequestMapping.uploadTrigger("{triggerName}")) {
+                defaultServerRespond {
+                    val triggerBytes = try {
+                        call.receive<UploadTriggerRequest>().triggerBody
+                    } catch (e: ContentTransformationException) {
+                        throw ContentTypeMismatch(e)
+                    }
 
-                if (triggerName == null) {
-                    response[Constants.Response.ERROR] = "No trigger name specified for PUT request"
-                    call.respond(response)
-                    return@put
-                }
+                    val triggerName = call.parameters["triggerName"] ?: throw NoTriggerNameError()
 
-                try {
                     TriggerManager.saveTrigger(triggerName, triggerBytes)
-                    response[Constants.Response.ANSWER] = true.toString()
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                    response[Constants.Response.ERROR] = e.toString()
+                    myLogger.info("Trigger $triggerName loaded")
+                    UploadTriggerResponse
                 }
-                call.respond(response)
             }
+        }
+    }
+
+    private suspend fun <T : Any> PipelineContext<Unit, ApplicationCall>.defaultServerRespond(block: suspend () -> T) {
+        try {
+            call.respond(block())
+        } catch (se: ServerError) {
+            myLogger.severe(se.message)
+            call.respond(se.asResponse())
+        } catch (e: Exception) {
+            myLogger.log(Level.SEVERE, "Unknown internal server error", e)
+            call.respond(InternalServerError(e).asResponse())
         }
     }
 }

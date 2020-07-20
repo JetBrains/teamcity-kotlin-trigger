@@ -7,6 +7,7 @@ import kotlinx.coroutines.runBlocking
 internal class DeferredHelper<T> {
     private val deferredValueMap = mutableMapOf<String, Deferred<T>>()
 
+    // All exceptions thrown inside block will be visible by the caller
     fun tryComplete(id: String, block: suspend () -> T): T = synchronized(this) {
         val deferred = runBlocking {
             deferredValueMap.computeIfAbsent(id) { async { block() } }

@@ -61,7 +61,7 @@
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-client-gson</artifactId>
+            <artifactId>ktor-client-jackson</artifactId>
             <version>${ktor.version}</version>
         </dependency>
     </dependencies>

@@ -9,12 +9,8 @@ class RemoteTriggersBean(
 ) {
     private val dataDirectory = myProjectManager.rootProject.getPluginDataDirectory(myPluginDescriptor.pluginName)
 
-    fun getFileNames(): List<String> {
-//        val dataDirectory = myProjectManager.rootProject.getPluginDataDirectory(myPluginDescriptor.pluginName)
-        return dataDirectory.list()?.asList() ?: listOf("Hi???")
-    }
+    fun getFileNames(): List<String> = dataDirectory.list()?.asList().orEmpty()
 
-    fun getFullPathTo(fileName: String): String {
-        return "${dataDirectory.absolutePath}${System.getProperty("file.separator")}$fileName"
-    }
+    fun getFullPathTo(fileName: String): String =
+        "${dataDirectory.absolutePath}${System.getProperty("file.separator")}$fileName"
 }
