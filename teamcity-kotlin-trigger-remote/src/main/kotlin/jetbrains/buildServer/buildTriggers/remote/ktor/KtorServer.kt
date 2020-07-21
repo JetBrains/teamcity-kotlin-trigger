@@ -16,15 +16,20 @@ import io.ktor.server.netty.Netty
 import io.ktor.util.pipeline.PipelineContext
 import jetbrains.buildServer.buildTriggers.remote.*
 import jetbrains.buildServer.buildTriggers.remote.jackson.TypeValidator
+import java.nio.file.Path
 import java.util.logging.Level
 import java.util.logging.Logger
 
-class KtorServer(private val myHost: String, private val myPort: Int) {
+internal class KtorServer(
+    private val myHost: String,
+    private val myPort: Int,
+    private val myTriggerManager: TriggerManager
+) {
     private val myLogger = Logger.getLogger(KtorServer::class.qualifiedName)
-    private val server = createServer()
+    private val myServer = createServer()
 
     init {
-        server.start(wait = true)
+        myServer.start(wait = true)
     }
 
     private fun Routing.handleRoute(
@@ -34,13 +39,13 @@ class KtorServer(private val myHost: String, private val myPort: Int) {
         handle(block)
     }
 
-    private suspend fun <T : Any> PipelineContext<Unit, ApplicationCall>.defaultServerRespond(block: suspend () -> T) {
+    private suspend fun <T : Any> PipelineContext<Unit, ApplicationCall>.respondWithErrorsHandled(block: suspend () -> T) {
         try {
             call.respond(block())
         } catch (se: ServerError) {
             myLogger.severe(se.message)
             call.respond(se.asResponse())
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             myLogger.log(Level.SEVERE, "Unknown internal server error", e)
             call.respond(internalServerError(e).asResponse())
         }
@@ -54,7 +59,7 @@ class KtorServer(private val myHost: String, private val myPort: Int) {
         }
         routing {
             handleRoute(RequestMapping.triggerBuild("{triggerName}")) {
-                defaultServerRespond {
+                respondWithErrorsHandled {
                     val request = try {
                         call.receive<TriggerBuildRequest>()
                     } catch (e: ContentTransformationException) {
@@ -64,16 +69,16 @@ class KtorServer(private val myHost: String, private val myPort: Int) {
                     val triggerName = call.parameters["triggerName"] ?: throw noTriggerNameError()
 
                     val myTrigger = try {
-                        TriggerManager.loadTrigger(triggerName)
-                    } catch (e: TriggerManager.TriggerDoesNotExistException) {
+                        myTriggerManager.loadTrigger(triggerName)
+                    } catch (e: TriggerDoesNotExistException) {
                         throw triggerDoesNotExistError(triggerName)
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         throw triggerLoadingError(e)
                     }
 
                     val answer = try {
                         myTrigger.triggerBuild(request)
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         throw internalTriggerError(e)
                     }
 
@@ -83,7 +88,7 @@ class KtorServer(private val myHost: String, private val myPort: Int) {
             }
 
             handleRoute(RequestMapping.uploadTrigger("{triggerName}")) {
-                defaultServerRespond {
+                respondWithErrorsHandled {
                     val triggerBytes = try {
                         call.receive<UploadTriggerRequest>().triggerBody
                     } catch (e: ContentTransformationException) {
@@ -92,7 +97,7 @@ class KtorServer(private val myHost: String, private val myPort: Int) {
 
                     val triggerName = call.parameters["triggerName"] ?: throw noTriggerNameError()
 
-                    TriggerManager.saveTrigger(triggerName, triggerBytes)
+                    myTriggerManager.saveTrigger(triggerName, triggerBytes)
                     myLogger.info("Trigger $triggerName loaded")
                     UploadTriggerResponse
                 }
@@ -102,5 +107,5 @@ class KtorServer(private val myHost: String, private val myPort: Int) {
 }
 
 fun main() {
-    KtorServer("127.0.0.1", 8080)
+    KtorServer("127.0.0.1", 8080, TriggerManagerImpl(Path.of("triggers")))
 }

@@ -25,10 +25,12 @@ class RemoteTriggerService(
 
     override fun describeTrigger(buildTriggerDescriptor: BuildTriggerDescriptor): String {
         val properties = buildTriggerDescriptor.properties
-        if (!TriggerUtil.getEnable(properties)) return "Does nothing (edit configurations to activate it)"
+
+        if (!TriggerUtil.getEnable(properties))
+            return "Does nothing (edit configurations to activate it)"
 
         val triggerName = TriggerUtil.getTargetTriggerName(properties)
-            ?: return "Incorrect state: trigger is not selected"
+            ?: return "Trigger is not selected"
 
         return "Uses $triggerName"
     }

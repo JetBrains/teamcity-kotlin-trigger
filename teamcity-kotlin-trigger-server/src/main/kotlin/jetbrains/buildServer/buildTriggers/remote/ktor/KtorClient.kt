@@ -35,7 +35,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
         makeRequest(
             RequestMapping.triggerBuild(triggerName),
             request,
-            onError = { null }
+            onConnectionError = null
         ) { response: Response ->
             if (response is TriggerBuildResponse) return response.answer
 
@@ -50,7 +50,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
         makeRequest(
             RequestMapping.uploadTrigger(triggerName),
             request,
-            onError = { false }
+            onConnectionError = false
         ) { response: Response ->
             if (response is UploadTriggerResponse) return true
 
@@ -71,7 +71,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
     private suspend inline fun <T, Req : Request, reified Resp : Response> makeRequest(
         mapping: Mapping,
         body: Req,
-        onError: (Throwable) -> T,
+        onConnectionError: T,
         onSuccess: (Resp) -> T
     ): T = try {
         val response = myClient.request<Resp>(mapping.path) {
@@ -79,7 +79,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
             this.body = body
         }
         onSuccess(response)
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
         when (e) {
             is ConnectTimeoutException ->
                 myLogger.error("Connection timed out to $myHost:$myPort")
@@ -91,12 +91,11 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
                 myLogger.error("Tried to use already closed connection to $myHost:$myPort")
             is IOException -> {
                 myLogger.error("Connection closed to $myHost:$myPort", e)
-                myClient.close()
-                outdated = true
+                closeConnection()
             }
             else -> throw e
         }
-        onError(e)
+        onConnectionError
     }
 
     private fun initClient() = HttpClient {

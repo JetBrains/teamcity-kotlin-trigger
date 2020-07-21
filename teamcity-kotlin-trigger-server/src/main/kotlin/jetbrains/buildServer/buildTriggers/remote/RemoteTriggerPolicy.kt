@@ -23,13 +23,14 @@ class RemoteTriggerPolicy(myTimeService: TimeService) : AsyncPolledBuildTrigger 
     private val myTriggerBuildResponseHelper = DeferredHelper<Boolean?>()
     private val myUploadTriggerHelper = DeferredHelper<Unit>()
 
-    private var myState: State = State.TriggerBuild
+    private val myStateMap = mutableMapOf<String, State>()
 
     override fun triggerActivated(context: PolledTriggerContext) = synchronized(this) {
         myKtorClient = getOrCreateClient {
             myLogger.debug("Trigger activation initialized a new connection")
         }
-        myState = State.TriggerBuild
+        // In future, trigger activation may mean that the trigger has changed, so the initial state should become UploadTrigger
+        myStateMap[TriggerUtil.getTriggerId(context)] = State.TriggerBuild
     }
 
     override fun triggerDeactivated(context: PolledTriggerContext): Unit = synchronized(this) {
@@ -38,15 +39,23 @@ class RemoteTriggerPolicy(myTimeService: TimeService) : AsyncPolledBuildTrigger 
     }
 
     override fun triggerBuild(prev: String?, context: PolledTriggerContext): String? = synchronized(this) {
-        when (myState) {
+        val id = TriggerUtil.getTriggerId(context)
+
+        // Additional checks should be introduced when custom trigger properties will be implemented
+        if (TriggerUtil.getTargetTriggerPath(context.triggerDescriptor.properties) == null) {
+            myLogger.debug("Trigger not specified, triggerBuild() invocation skipped")
+            return myStateMap[id].toString()
+        }
+
+        when (myStateMap[id]) {
             State.TriggerBuild -> {
                 triggerBuild(context)
-                if (myState == State.UploadTrigger)
+                if (myStateMap[id] == State.UploadTrigger)
                     uploadTrigger(context)
             }
             State.UploadTrigger -> uploadTrigger(context)
         }
-        myState.name
+        myStateMap[id].toString()
     }
 
     private fun uploadTrigger(context: PolledTriggerContext) {
@@ -66,7 +75,7 @@ class RemoteTriggerPolicy(myTimeService: TimeService) : AsyncPolledBuildTrigger 
 
                 if (!triggerUploaded)
                     myLogger.error("Failed to upload trigger '$triggerName' to the server. Will retry")
-                else myState = State.TriggerBuild
+                else myStateMap[id] = State.TriggerBuild
             }
         } catch (e: ValueNotCompleteException) {
         } catch (e: ServerError) {
@@ -90,7 +99,7 @@ class RemoteTriggerPolicy(myTimeService: TimeService) : AsyncPolledBuildTrigger 
             null
         } catch (e: TriggerDoesNotExistError) {
             myLogger.warn(e.message ?: "Trigger '$triggerName' does not exist on the server")
-            myState = State.UploadTrigger
+            myStateMap[id] = State.UploadTrigger
             false
         } catch (e: ServerError) {
             myLogger.error("Server responded with an error: $e")
