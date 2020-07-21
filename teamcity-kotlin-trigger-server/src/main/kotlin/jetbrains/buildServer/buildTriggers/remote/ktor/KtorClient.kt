@@ -27,7 +27,7 @@ private val timeUnit = TimeUnit.SECONDS
 
 internal class KtorClient(private val myHost: String, private val myPort: Int) {
     private val myLogger = Logger.getInstance(KtorClient::class.qualifiedName)
-    private val client = initClient()
+    private val myClient = initClient()
     var outdated = false
         private set
 
@@ -35,7 +35,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
         makeRequest(
             RequestMapping.triggerBuild(triggerName),
             request,
-            { null }
+            onError = { null }
         ) { response: Response ->
             if (response is TriggerBuildResponse) return response.answer
 
@@ -50,12 +50,12 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
         makeRequest(
             RequestMapping.uploadTrigger(triggerName),
             request,
-            { false }
+            onError = { false }
         ) { response: Response ->
             if (response is UploadTriggerResponse) return true
 
             when (response) {
-                is ErroneousResponse -> myLogger.error("Server responded with an error: $response")
+                is ErroneousResponse -> throw response.error
                 else -> myLogger.error("Server response type is invalid: $response")
             }
             false
@@ -64,7 +64,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
     fun closeConnection() {
         if (outdated) return
 
-        client.close()
+        myClient.close()
         outdated = true
     }
 
@@ -74,7 +74,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
         onError: (Throwable) -> T,
         onSuccess: (Resp) -> T
     ): T = try {
-        val response = client.request<Resp>(mapping.path) {
+        val response = myClient.request<Resp>(mapping.path) {
             method = mapping.httpMethod
             this.body = body
         }
@@ -91,7 +91,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
                 myLogger.error("Tried to use already closed connection to $myHost:$myPort")
             is IOException -> {
                 myLogger.error("Connection closed to $myHost:$myPort", e)
-                client.close()
+                myClient.close()
                 outdated = true
             }
             else -> throw e

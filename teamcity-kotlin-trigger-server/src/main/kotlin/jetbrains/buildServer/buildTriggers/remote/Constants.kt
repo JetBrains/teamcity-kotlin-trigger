@@ -1,6 +1,6 @@
 package jetbrains.buildServer.buildTriggers.remote
 
-object Constants {
+internal object Constants {
     const val ENABLE = "enable"
     const val DELAY = "delay"
     const val PREVIOUS_CALL_TIME = "previousCallTime"

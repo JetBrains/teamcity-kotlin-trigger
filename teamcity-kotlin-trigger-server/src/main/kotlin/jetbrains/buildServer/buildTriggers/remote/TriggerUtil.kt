@@ -6,6 +6,7 @@ import jetbrains.buildServer.util.TimeService
 import java.io.File
 
 internal class TriggerUtil(private val myTimeService: TimeService) {
+
     fun createTriggerBuildRequest(context: PolledTriggerContext): TriggerBuildRequest {
         val properties = context.triggerDescriptor.properties
         return TriggerBuildRequest(
@@ -24,11 +25,11 @@ internal class TriggerUtil(private val myTimeService: TimeService) {
 
         fun getTriggerId(context: PolledTriggerContext): String = context.triggerDescriptor.id
 
-        fun getTargetTriggerPath(context: PolledTriggerContext): String =
-            context.triggerDescriptor.properties[Constants.TRIGGER_POLICY]!!
+        fun getTargetTriggerPath(properties: Map<String, String>): String? =
+            properties[Constants.TRIGGER_POLICY]
 
-        fun getTargetTriggerName(context: PolledTriggerContext): String =
-            File(getTargetTriggerPath(context)).nameWithoutExtension
+        fun getTargetTriggerName(properties: Map<String, String>): String? =
+            getTargetTriggerPath(properties)?.let { File(it).nameWithoutExtension }
 
         fun setPreviousCallTime(time: Long, context: PolledTriggerContext) {
             context.customDataStorage.putValue(Constants.PREVIOUS_CALL_TIME, time.toString())

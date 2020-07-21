@@ -1,16 +1,20 @@
 package jetbrains.buildServer.buildTriggers.remote.ktor
 
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 
 internal class DeferredHelper<T> {
-    private val deferredValueMap = mutableMapOf<String, Deferred<T>>()
+    private val myDeferredValueMap = mutableMapOf<String, Deferred<T>>()
 
     // All exceptions thrown inside block will be visible by the caller
-    fun tryComplete(id: String, block: suspend () -> T): T = synchronized(this) {
+    fun tryComplete(id: String, block: suspend () -> T): T {
         val deferred = runBlocking {
-            deferredValueMap.computeIfAbsent(id) { async { block() } }
+            myDeferredValueMap.computeIfAbsent(id) {
+                // GlobalScope is needed for exceptions to be preserved until we call await
+                GlobalScope.async { block() }
+            }
         }
 
         // no runBlocking here, because the exception will cancel the deferred
@@ -18,9 +22,9 @@ internal class DeferredHelper<T> {
             throw ValueNotCompleteException(id)
 
         @Suppress("DeferredResultUnused")
-        deferredValueMap.remove(id)
+        myDeferredValueMap.remove(id)
 
-        runBlocking {
+        return runBlocking {
             deferred.await()
         }
     }

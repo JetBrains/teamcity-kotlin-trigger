@@ -8,13 +8,12 @@
 
 <tr class="noBorder">
     <td>
-        <em>This trigger starts your build by a schedule</em>
+        <em>You may choose one trigger from the list below</em>
     </td>
 </tr>
 <tr>
     <td>
-        <props:checkboxProperty name="<%=Constants.ENABLE%>"
-                                onclick="window.SimpleTrigger.checkboxUpdate(this);"/>
+        <props:checkboxProperty name="<%=Constants.ENABLE%>"/>
         <label for="<%=Constants.ENABLE%>">Enable trigger</label>
         <span class="smallNote">
           consider turning this flag off in case you are tired of this trigger<br/>
@@ -34,25 +33,13 @@
         <span class="error" id="error_<%=Constants.TRIGGER_POLICY%>"></span>
     </td>
 </tr>
-<tr id="delay">
+<tr>
     <td>
         <label for="<%=Constants.DELAY%>">Delay, m:</label>
         <props:textProperty name="<%=Constants.DELAY%>"/>
+        <span class="smallNote">
+          this value is only used by the ScheduleTrigger, but for now it has to be specified for all triggers
+        </span>
         <span class="error" id="error_<%=Constants.DELAY%>"></span>
     </td>
 </tr>
-
-<script type="application/javascript">
-    window.SimpleTrigger = {
-        checkboxUpdate: function (checkbox) {
-            if (checkbox.checked) {
-                $j('#delay').show();
-            } else {
-                $j('#delay').hide();
-            }
-        }
-    }
-    if (!$j('#<%=Constants.ENABLE%>').checked) {
-        $j('#delay').hide();
-    }
-</script>

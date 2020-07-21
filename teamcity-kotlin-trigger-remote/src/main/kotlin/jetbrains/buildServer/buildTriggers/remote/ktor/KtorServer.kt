@@ -34,6 +34,18 @@ class KtorServer(private val myHost: String, private val myPort: Int) {
         handle(block)
     }
 
+    private suspend fun <T : Any> PipelineContext<Unit, ApplicationCall>.defaultServerRespond(block: suspend () -> T) {
+        try {
+            call.respond(block())
+        } catch (se: ServerError) {
+            myLogger.severe(se.message)
+            call.respond(se.asResponse())
+        } catch (e: Exception) {
+            myLogger.log(Level.SEVERE, "Unknown internal server error", e)
+            call.respond(internalServerError(e).asResponse())
+        }
+    }
+
     private fun createServer() = embeddedServer(Netty, host = myHost, port = myPort) {
         install(ContentNegotiation) {
             jackson {
@@ -46,23 +58,23 @@ class KtorServer(private val myHost: String, private val myPort: Int) {
                     val request = try {
                         call.receive<TriggerBuildRequest>()
                     } catch (e: ContentTransformationException) {
-                        throw ContentTypeMismatch(e)
+                        throw contentTypeMismatchError(e)
                     }
 
-                    val triggerName = call.parameters["triggerName"] ?: throw NoTriggerNameError()
+                    val triggerName = call.parameters["triggerName"] ?: throw noTriggerNameError()
 
                     val myTrigger = try {
                         TriggerManager.loadTrigger(triggerName)
                     } catch (e: TriggerManager.TriggerDoesNotExistException) {
-                        throw TriggerDoesNotExistError(triggerName)
+                        throw triggerDoesNotExistError(triggerName)
                     } catch (e: Exception) {
-                        throw TriggerLoadingError(e)
+                        throw triggerLoadingError(e)
                     }
 
                     val answer = try {
                         myTrigger.triggerBuild(request)
                     } catch (e: Exception) {
-                        throw InternalTriggerError(e)
+                        throw internalTriggerError(e)
                     }
 
                     myLogger.info("Sending response: $answer")
@@ -75,28 +87,16 @@ class KtorServer(private val myHost: String, private val myPort: Int) {
                     val triggerBytes = try {
                         call.receive<UploadTriggerRequest>().triggerBody
                     } catch (e: ContentTransformationException) {
-                        throw ContentTypeMismatch(e)
+                        throw contentTypeMismatchError(e)
                     }
 
-                    val triggerName = call.parameters["triggerName"] ?: throw NoTriggerNameError()
+                    val triggerName = call.parameters["triggerName"] ?: throw noTriggerNameError()
 
                     TriggerManager.saveTrigger(triggerName, triggerBytes)
                     myLogger.info("Trigger $triggerName loaded")
                     UploadTriggerResponse
                 }
             }
-        }
-    }
-
-    private suspend fun <T : Any> PipelineContext<Unit, ApplicationCall>.defaultServerRespond(block: suspend () -> T) {
-        try {
-            call.respond(block())
-        } catch (se: ServerError) {
-            myLogger.severe(se.message)
-            call.respond(se.asResponse())
-        } catch (e: Exception) {
-            myLogger.log(Level.SEVERE, "Unknown internal server error", e)
-            call.respond(InternalServerError(e).asResponse())
         }
     }
 }

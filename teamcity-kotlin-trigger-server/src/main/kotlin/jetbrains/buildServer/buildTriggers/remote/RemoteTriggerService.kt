@@ -6,7 +6,6 @@ import jetbrains.buildServer.buildTriggers.BuildTriggerService
 import jetbrains.buildServer.buildTriggers.async.AsyncPolledBuildTriggerFactory
 import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.PropertiesProcessor
-import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.TimeService
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 
@@ -22,28 +21,23 @@ class RemoteTriggerService(
     )
 
     override fun getName() = "teamcityKotlinTrigger"
-    override fun getDisplayName() = "Remote scheduling trigger"
+    override fun getDisplayName() = "Remote triggers"
 
     override fun describeTrigger(buildTriggerDescriptor: BuildTriggerDescriptor): String {
         val properties = buildTriggerDescriptor.properties
         if (!TriggerUtil.getEnable(properties)) return "Does nothing (edit configurations to activate it)"
 
-        val delay = TriggerUtil.getDelay(properties)
-        if (delay == null || delay <= 0) return "Incorrect state: wrong delay"
+        val triggerName = TriggerUtil.getTargetTriggerName(properties)
+            ?: return "Incorrect state: trigger is not selected"
 
-        val period =
-            if (delay != 1) StringBuilder("$delay ")
-            else StringBuilder()
-
-        period.append(StringUtil.pluralize("minute", delay))
-        return "Initiates a build every $period"
+        return "Uses $triggerName"
     }
 
     override fun getTriggerPropertiesProcessor() =
         PropertiesProcessor { properties: Map<String, String> ->
             val enable = TriggerUtil.getEnable(properties)
             val delay = TriggerUtil.getDelay(properties)
-            val triggerPolicy = properties[Constants.TRIGGER_POLICY]
+            val triggerPolicy = TriggerUtil.getTargetTriggerPath(properties)
 
             val rv = mutableListOf<InvalidProperty>()
 

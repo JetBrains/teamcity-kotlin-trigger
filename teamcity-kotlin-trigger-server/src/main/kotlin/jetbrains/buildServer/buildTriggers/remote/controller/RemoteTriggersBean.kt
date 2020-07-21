@@ -2,15 +2,16 @@ package jetbrains.buildServer.buildTriggers.remote.controller
 
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.web.openapi.PluginDescriptor
+import java.io.File
 
 class RemoteTriggersBean(
     myProjectManager: ProjectManager,
     myPluginDescriptor: PluginDescriptor
 ) {
-    private val dataDirectory = myProjectManager.rootProject.getPluginDataDirectory(myPluginDescriptor.pluginName)
+    private val myDataDirectory = myProjectManager.rootProject.getPluginDataDirectory(myPluginDescriptor.pluginName)
 
-    fun getFileNames(): List<String> = dataDirectory.list()?.asList().orEmpty()
+    fun getFileNames(): List<String> = myDataDirectory.list()?.asList().orEmpty()
 
     fun getFullPathTo(fileName: String): String =
-        "${dataDirectory.absolutePath}${System.getProperty("file.separator")}$fileName"
+        "${myDataDirectory.absolutePath}${File.separator}$fileName"
 }
