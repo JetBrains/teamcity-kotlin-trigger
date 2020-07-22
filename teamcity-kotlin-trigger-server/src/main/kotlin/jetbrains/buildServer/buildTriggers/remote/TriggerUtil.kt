@@ -28,8 +28,7 @@ internal class TriggerUtil(private val myTimeService: TimeService) {
         fun getTargetTriggerPath(properties: Map<String, String>): String? =
             properties[Constants.TRIGGER_POLICY]
 
-        fun getTargetTriggerName(properties: Map<String, String>): String? =
-            getTargetTriggerPath(properties)?.let { File(it).nameWithoutExtension }
+        fun getTriggerName(path: String): String = File(path).nameWithoutExtension
 
         fun setPreviousCallTime(time: Long, context: PolledTriggerContext) {
             context.customDataStorage.putValue(Constants.PREVIOUS_CALL_TIME, time.toString())

@@ -18,6 +18,7 @@ import io.ktor.http.contentType
 import io.ktor.network.sockets.ConnectTimeoutException
 import jetbrains.buildServer.buildTriggers.remote.*
 import jetbrains.buildServer.buildTriggers.remote.jackson.TypeValidator
+import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -31,7 +32,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
     var outdated = false
         private set
 
-    suspend fun sendTriggerBuild(triggerName: String, request: TriggerBuildRequest): Boolean? =
+    fun sendTriggerBuild(triggerName: String, request: TriggerBuildRequest): Boolean? =
         makeRequest(
             RequestMapping.triggerBuild(triggerName),
             request,
@@ -46,7 +47,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
             null
         }
 
-    suspend fun uploadTrigger(triggerName: String, request: UploadTriggerRequest): Boolean =
+    fun uploadTrigger(triggerName: String, request: UploadTriggerRequest): Boolean =
         makeRequest(
             RequestMapping.uploadTrigger(triggerName),
             request,
@@ -68,15 +69,17 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
         outdated = true
     }
 
-    private suspend inline fun <T, Req : Request, reified Resp : Response> makeRequest(
+    private inline fun <T, Req : Request, reified Resp : Response> makeRequest(
         mapping: Mapping,
         body: Req,
         onConnectionError: T,
         onSuccess: (Resp) -> T
     ): T = try {
-        val response = myClient.request<Resp>(mapping.path) {
-            method = mapping.httpMethod
-            this.body = body
+        val response = runBlocking {
+            myClient.request<Resp>(mapping.path) {
+                method = mapping.httpMethod
+                this.body = body
+            }
         }
         onSuccess(response)
     } catch (e: Throwable) {

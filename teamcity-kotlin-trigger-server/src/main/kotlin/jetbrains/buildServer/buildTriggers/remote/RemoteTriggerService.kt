@@ -6,17 +6,19 @@ import jetbrains.buildServer.buildTriggers.BuildTriggerService
 import jetbrains.buildServer.buildTriggers.async.AsyncPolledBuildTriggerFactory
 import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.PropertiesProcessor
+import jetbrains.buildServer.serverSide.executors.ExecutorServices
 import jetbrains.buildServer.util.TimeService
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 
 class RemoteTriggerService(
     private val myPluginDescriptor: PluginDescriptor,
     factory: AsyncPolledBuildTriggerFactory,
-    timeService: TimeService
+    timeService: TimeService,
+    executorServices: ExecutorServices
 ) : BuildTriggerService() {
 
     private val myPolicy = factory.createBuildTrigger(
-        RemoteTriggerPolicy(timeService),
+        RemoteTriggerPolicy(timeService, executorServices.lowPriorityExecutorService),
         Logger.getInstance(RemoteTriggerService::class.qualifiedName)
     )
 
@@ -29,10 +31,10 @@ class RemoteTriggerService(
         if (!TriggerUtil.getEnable(properties))
             return "Does nothing (edit configurations to activate it)"
 
-        val triggerName = TriggerUtil.getTargetTriggerName(properties)
+        val triggerPath = TriggerUtil.getTargetTriggerPath(properties)
             ?: return "Trigger is not selected"
 
-        return "Uses $triggerName"
+        return "Uses ${TriggerUtil.getTriggerName(triggerPath)}"
     }
 
     override fun getTriggerPropertiesProcessor() =
