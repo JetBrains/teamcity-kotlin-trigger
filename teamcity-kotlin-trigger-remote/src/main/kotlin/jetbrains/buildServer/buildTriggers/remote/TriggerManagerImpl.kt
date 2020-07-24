@@ -4,19 +4,19 @@ import java.net.URLClassLoader
 import java.nio.file.Path
 
 internal class TriggerManagerImpl(private val myTriggerDirPath: Path) : TriggerManager {
-
-    override fun loadTrigger(triggerName: String): Trigger {
+    // TODO: store in a map to not instantiate a new trigger each time
+    override fun loadTrigger(triggerName: String): TriggerService {
         if (!triggerExists(triggerName))
             throw TriggerDoesNotExistException()
 
         val urlClassLoader = URLClassLoader(arrayOf(triggerURL(triggerName)))
         val triggerClass = Class.forName(triggerClass(triggerName), true, urlClassLoader)
 
-        if (!Trigger::class.java.isAssignableFrom(triggerClass))
-            throw ClassCastException("$triggerClass cannot be cast to ${Trigger::class.qualifiedName}")
+        if (!TriggerService::class.java.isAssignableFrom(triggerClass))
+            throw ClassCastException("$triggerClass cannot be cast to ${TriggerService::class.qualifiedName}")
 
         val instance = triggerClass.getDeclaredConstructor().newInstance()
-        return instance as Trigger
+        return instance as TriggerService
     }
 
     override fun saveTrigger(triggerName: String, bytes: ByteArray) {

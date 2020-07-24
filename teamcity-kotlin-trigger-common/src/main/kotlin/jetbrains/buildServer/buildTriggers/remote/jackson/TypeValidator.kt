@@ -9,5 +9,6 @@ object TypeValidator {
         BasicPolymorphicTypeValidator.builder()
             .allowIfSubType(Response::class.java)
             .allowIfSubType(ServerError::class.java)
+            .allowIfSubType(Map::class.java)
             .build()
 }

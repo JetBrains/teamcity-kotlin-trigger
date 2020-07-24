@@ -1,42 +1,41 @@
 package jetbrains.buildServer.buildTriggers.remote
 
 import jetbrains.buildServer.buildTriggers.PolledTriggerContext
-import jetbrains.buildServer.util.StringUtil
+import jetbrains.buildServer.serverSide.CustomDataStorage
 import jetbrains.buildServer.util.TimeService
 import java.io.File
 
 internal class TriggerUtil(private val myTimeService: TimeService) {
 
-    fun createTriggerBuildRequest(context: PolledTriggerContext): TriggerBuildRequest {
-        val properties = context.triggerDescriptor.properties
-        return TriggerBuildRequest(
-            getEnable(properties),
-            getDelay(properties)!!,
-            getPreviousCallTime(context),
-            getCurrentTime()
-        )
-    }
-
-    fun getCurrentTime() = myTimeService.now()
+    fun createTriggerBuildContext(context: PolledTriggerContext) = TriggerContext(
+        myTimeService.now(),
+        parseTriggerProperties(context.triggerDescriptor.properties) ?: emptyMap(),
+        getCustomDataStorage(context).values?.toMutableMap() ?: mutableMapOf()
+    )
 
     companion object {
-        fun getEnable(properties: Map<String, String>) = StringUtil.isTrue(properties[Constants.ENABLE])
-        fun getDelay(properties: Map<String, String>) = properties[Constants.DELAY]?.toIntOrNull()
+        fun parseTriggerProperties(properties: Map<String, String>): Map<String, String>? {
+            return properties[Constants.PROPERTIES]
+                ?.lines()
+                ?.map { it.trim() }
+                ?.filterNot { it.isEmpty() }
+                ?.map {
+                    val i = it.indexOf("=")
+                    if (i <= 0 || i == it.length - 1) return null
+                    it.substring(0, i).trim() to it.substring(i + 1).trim()
+                }?.toMap()
+        }
 
-        fun getTriggerId(context: PolledTriggerContext): String = context.triggerDescriptor.id
+        fun getCustomDataStorage(context: PolledTriggerContext): CustomDataStorage {
+            val triggerServiceId = context.triggerDescriptor.buildTriggerService::class.qualifiedName
+            val triggerId = context.triggerDescriptor.id
+
+            return context.buildType.getCustomDataStorage(triggerServiceId + "_" + triggerId)
+        }
 
         fun getTargetTriggerPath(properties: Map<String, String>): String? =
             properties[Constants.TRIGGER_POLICY]
 
         fun getTriggerName(path: String): String = File(path).nameWithoutExtension
-
-        fun setPreviousCallTime(time: Long, context: PolledTriggerContext) {
-            context.customDataStorage.putValue(Constants.PREVIOUS_CALL_TIME, time.toString())
-        }
-
-        private fun getPreviousCallTime(context: PolledTriggerContext) =
-            context.customDataStorage
-                .getValue(Constants.PREVIOUS_CALL_TIME)
-                ?.toLongOrNull()
     }
 }

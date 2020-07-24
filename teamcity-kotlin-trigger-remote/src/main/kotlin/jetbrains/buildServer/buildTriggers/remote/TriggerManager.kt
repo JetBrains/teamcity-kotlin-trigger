@@ -1,7 +1,7 @@
 package jetbrains.buildServer.buildTriggers.remote
 
 internal interface TriggerManager {
-    fun loadTrigger(triggerName: String): Trigger
+    fun loadTrigger(triggerName: String): TriggerService
     fun saveTrigger(triggerName: String, bytes: ByteArray)
 
 }

@@ -8,17 +8,7 @@
 
 <tr class="noBorder">
     <td>
-        <em>You may choose one trigger from the list below</em>
-    </td>
-</tr>
-<tr>
-    <td>
-        <props:checkboxProperty name="<%=Constants.ENABLE%>"/>
-        <label for="<%=Constants.ENABLE%>">Enable trigger</label>
-        <span class="smallNote">
-          consider turning this flag off in case you are tired of this trigger<br/>
-        </span>
-        <span class="error" id="error_<%=Constants.ENABLE%>"></span>
+        <em>Choose one trigger from the list below</em>
     </td>
 </tr>
 <tr>
@@ -35,11 +25,8 @@
 </tr>
 <tr>
     <td>
-        <label for="<%=Constants.DELAY%>">Delay, m:</label>
-        <props:textProperty name="<%=Constants.DELAY%>"/>
-        <span class="smallNote">
-          this value is only used by the ScheduleTrigger, but for now it has to be specified for all triggers
-        </span>
-        <span class="error" id="error_<%=Constants.DELAY%>"></span>
+        <label for="<%=Constants.PROPERTIES%>">Specify properties for your trigger in format "key=value"</label>
+        <props:multilineProperty name="<%=Constants.PROPERTIES%>" linkTitle="Properties" cols="35" rows="5"/>
+        <span class="error" id="error_<%=Constants.PROPERTIES%>"></span>
     </td>
 </tr>

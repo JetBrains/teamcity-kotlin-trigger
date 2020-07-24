@@ -11,10 +11,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 @JsonSubTypes(
     JsonSubTypes.Type(ErroneousResponse::class),
     JsonSubTypes.Type(TriggerBuildResponse::class),
-    JsonSubTypes.Type(UploadTriggerResponse::class)
+    JsonSubTypes.Type(OkayResponse::class)
 )
 sealed class Response
 
 class ErroneousResponse(val error: ServerError) : Response()
-class TriggerBuildResponse(val answer: Boolean) : Response()
-object UploadTriggerResponse : Response()
+class TriggerBuildResponse(val answer: Boolean, val customData: Map<String, String>) : Response()
+object OkayResponse : Response()

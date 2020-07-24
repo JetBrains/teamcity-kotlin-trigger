@@ -20,13 +20,16 @@ import java.nio.file.Path
 import java.util.logging.Level
 import java.util.logging.Logger
 
+internal typealias HandlingContext = PipelineContext<Unit, ApplicationCall>
+
 internal class KtorServer(
     private val myHost: String,
     private val myPort: Int,
-    private val myTriggerManager: TriggerManager
+    myTriggerManager: TriggerManager
 ) {
     private val myLogger = Logger.getLogger(KtorServer::class.qualifiedName)
     private val myServer = createServer()
+    private val myActionHandler = ActionHandler(myTriggerManager, myLogger)
 
     init {
         myServer.start(wait = true)
@@ -34,12 +37,12 @@ internal class KtorServer(
 
     private fun Routing.handleRoute(
         mapping: Mapping,
-        block: suspend PipelineContext<Unit, ApplicationCall>.(Unit) -> Unit
+        block: suspend HandlingContext.(Unit) -> Unit
     ) = route(mapping.path, mapping.httpMethod) {
         handle(block)
     }
 
-    private suspend fun <T : Any> PipelineContext<Unit, ApplicationCall>.respondWithErrorsHandled(block: suspend () -> T) {
+    private suspend fun <T : Any> HandlingContext.respondWithErrorsHandled(block: suspend () -> T) {
         try {
             call.respond(block())
         } catch (se: ServerError) {
@@ -51,6 +54,16 @@ internal class KtorServer(
         }
     }
 
+    private suspend inline fun <T : Any, reified R : RequestBody> HandlingContext.withTriggerNameAndRequestBody(block: (String, R) -> T): T {
+        val triggerName = call.parameters["triggerName"] ?: throw noTriggerNameError()
+        val requestBody = try {
+            call.receive<R>()
+        } catch (e: ContentTransformationException) {
+            throw contentTypeMismatchError(e)
+        }
+        return block(triggerName, requestBody)
+    }
+
     private fun createServer() = embeddedServer(Netty, host = myHost, port = myPort) {
         install(ContentNegotiation) {
             jackson {
@@ -58,48 +71,26 @@ internal class KtorServer(
             }
         }
         routing {
-            handleRoute(RequestMapping.triggerBuild("{triggerName}")) {
+            val triggerNameParam = "{triggerName}"
+
+//            handleRoute(RequestMapping.triggerActivated(triggerNameParam)) {
+//                respondWithErrorsHandled {
+//                    withTriggerNameAndRequestBody(myActionHandler::triggerActivated)
+//                }
+//            }
+//            handleRoute(RequestMapping.triggerDeactivated(triggerNameParam)) {
+//                respondWithErrorsHandled {
+//                    withTriggerNameAndRequestBody(myActionHandler::triggerDeactivated)
+//                }
+//            }
+            handleRoute(RequestMapping.triggerBuild(triggerNameParam)) {
                 respondWithErrorsHandled {
-                    val request = try {
-                        call.receive<TriggerBuildRequest>()
-                    } catch (e: ContentTransformationException) {
-                        throw contentTypeMismatchError(e)
-                    }
-
-                    val triggerName = call.parameters["triggerName"] ?: throw noTriggerNameError()
-
-                    val myTrigger = try {
-                        myTriggerManager.loadTrigger(triggerName)
-                    } catch (e: TriggerDoesNotExistException) {
-                        throw triggerDoesNotExistError(triggerName)
-                    } catch (e: Throwable) {
-                        throw triggerLoadingError(e)
-                    }
-
-                    val answer = try {
-                        myTrigger.triggerBuild(request)
-                    } catch (e: Throwable) {
-                        throw internalTriggerError(e)
-                    }
-
-                    myLogger.info("Sending response: $answer")
-                    TriggerBuildResponse(answer)
+                    withTriggerNameAndRequestBody(myActionHandler::triggerBuild)
                 }
             }
-
-            handleRoute(RequestMapping.uploadTrigger("{triggerName}")) {
+            handleRoute(RequestMapping.uploadTrigger(triggerNameParam)) {
                 respondWithErrorsHandled {
-                    val triggerBytes = try {
-                        call.receive<UploadTriggerRequest>().triggerBody
-                    } catch (e: ContentTransformationException) {
-                        throw contentTypeMismatchError(e)
-                    }
-
-                    val triggerName = call.parameters["triggerName"] ?: throw noTriggerNameError()
-
-                    myTriggerManager.saveTrigger(triggerName, triggerBytes)
-                    myLogger.info("Trigger $triggerName loaded")
-                    UploadTriggerResponse
+                    withTriggerNameAndRequestBody(myActionHandler::uploadTrigger)
                 }
             }
         }

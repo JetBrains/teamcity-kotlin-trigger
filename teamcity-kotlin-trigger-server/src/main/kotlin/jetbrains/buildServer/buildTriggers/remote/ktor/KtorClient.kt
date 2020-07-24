@@ -32,34 +32,31 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
     var outdated = false
         private set
 
-    fun sendTriggerBuild(triggerName: String, request: TriggerBuildRequest): Boolean? =
+    fun sendTriggerBuild(triggerName: String, context: TriggerContext): TriggerBuildResponse? =
         makeRequest(
             RequestMapping.triggerBuild(triggerName),
-            request,
+            context,
             onConnectionError = null
         ) { response: Response ->
-            if (response is TriggerBuildResponse) return response.answer
-
             when (response) {
+                is TriggerBuildResponse -> return response
                 is ErroneousResponse -> throw response.error
                 else -> myLogger.error("Server response type is invalid: $response")
             }
             null
         }
 
-    fun uploadTrigger(triggerName: String, request: UploadTriggerRequest): Boolean =
+    fun uploadTrigger(triggerName: String, body: TriggerBody): Unit =
         makeRequest(
             RequestMapping.uploadTrigger(triggerName),
-            request,
-            onConnectionError = false
+            body,
+            onConnectionError = Unit
         ) { response: Response ->
-            if (response is UploadTriggerResponse) return true
-
             when (response) {
+                is OkayResponse -> return
                 is ErroneousResponse -> throw response.error
-                else -> myLogger.error("Server response type is invalid: $response")
+                else -> throw RuntimeException("Server response type is invalid: ${response::class.qualifiedName}")
             }
-            false
         }
 
     fun closeConnection() {
@@ -69,7 +66,7 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
         outdated = true
     }
 
-    private inline fun <T, Req : Request, reified Resp : Response> makeRequest(
+    private inline fun <T, Req : RequestBody, reified Resp : Response> makeRequest(
         mapping: Mapping,
         body: Req,
         onConnectionError: T,
