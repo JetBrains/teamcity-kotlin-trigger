@@ -25,11 +25,11 @@ internal typealias HandlingContext = PipelineContext<Unit, ApplicationCall>
 internal class KtorServer(
     private val myHost: String,
     private val myPort: Int,
-    myTriggerManager: TriggerManager
+    myTriggerPolicyManager: TriggerPolicyManager
 ) {
     private val myLogger = Logger.getLogger(KtorServer::class.qualifiedName)
     private val myServer = createServer()
-    private val myActionHandler = ActionHandler(myTriggerManager, myLogger)
+    private val myActionHandler = ActionHandler(myTriggerPolicyManager, myLogger)
 
     init {
         myServer.start(wait = true)
@@ -55,13 +55,13 @@ internal class KtorServer(
     }
 
     private suspend inline fun <T : Any, reified R : RequestBody> HandlingContext.withTriggerNameAndRequestBody(block: (String, R) -> T): T {
-        val triggerName = call.parameters["triggerName"] ?: throw noTriggerNameError()
+        val triggerPolicyName = call.parameters["triggerPolicyName"] ?: throw noTriggerPolicyNameError()
         val requestBody = try {
             call.receive<R>()
         } catch (e: ContentTransformationException) {
             throw contentTypeMismatchError(e)
         }
-        return block(triggerName, requestBody)
+        return block(triggerPolicyName, requestBody)
     }
 
     private fun createServer() = embeddedServer(Netty, host = myHost, port = myPort) {
@@ -71,26 +71,16 @@ internal class KtorServer(
             }
         }
         routing {
-            val triggerNameParam = "{triggerName}"
+            val triggerPolicyNameParam = "{triggerPolicyName}"
 
-//            handleRoute(RequestMapping.triggerActivated(triggerNameParam)) {
-//                respondWithErrorsHandled {
-//                    withTriggerNameAndRequestBody(myActionHandler::triggerActivated)
-//                }
-//            }
-//            handleRoute(RequestMapping.triggerDeactivated(triggerNameParam)) {
-//                respondWithErrorsHandled {
-//                    withTriggerNameAndRequestBody(myActionHandler::triggerDeactivated)
-//                }
-//            }
-            handleRoute(RequestMapping.triggerBuild(triggerNameParam)) {
+            handleRoute(RequestMapping.triggerBuild(triggerPolicyNameParam)) {
                 respondWithErrorsHandled {
                     withTriggerNameAndRequestBody(myActionHandler::triggerBuild)
                 }
             }
-            handleRoute(RequestMapping.uploadTrigger(triggerNameParam)) {
+            handleRoute(RequestMapping.uploadTriggerPolicy(triggerPolicyNameParam)) {
                 respondWithErrorsHandled {
-                    withTriggerNameAndRequestBody(myActionHandler::uploadTrigger)
+                    withTriggerNameAndRequestBody(myActionHandler::saveTriggerPolicy)
                 }
             }
         }
@@ -98,5 +88,5 @@ internal class KtorServer(
 }
 
 fun main() {
-    KtorServer("127.0.0.1", 8080, TriggerManagerImpl(Path.of("triggers")))
+    KtorServer("127.0.0.1", 8080, TriggerPolicyManagerImpl(Path.of("triggers")))
 }

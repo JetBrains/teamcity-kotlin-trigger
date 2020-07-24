@@ -32,9 +32,9 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
     var outdated = false
         private set
 
-    fun sendTriggerBuild(triggerName: String, context: TriggerContext): TriggerBuildResponse? =
+    fun sendTriggerBuild(triggerPolicyName: String, context: TriggerContext): TriggerBuildResponse? =
         makeRequest(
-            RequestMapping.triggerBuild(triggerName),
+            RequestMapping.triggerBuild(triggerPolicyName),
             context,
             onConnectionError = null
         ) { response: Response ->
@@ -46,9 +46,9 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
             null
         }
 
-    fun uploadTrigger(triggerName: String, body: TriggerBody): Unit =
+    fun uploadTriggerPolicy(triggerPolicyName: String, body: TriggerPolicyBody): Unit =
         makeRequest(
-            RequestMapping.uploadTrigger(triggerName),
+            RequestMapping.uploadTriggerPolicy(triggerPolicyName),
             body,
             onConnectionError = Unit
         ) { response: Response ->

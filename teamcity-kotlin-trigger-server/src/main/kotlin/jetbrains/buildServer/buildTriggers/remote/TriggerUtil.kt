@@ -15,15 +15,15 @@ internal class TriggerUtil(private val myTimeService: TimeService) {
 
     companion object {
         fun parseTriggerProperties(properties: Map<String, String>): Map<String, String>? {
-            return properties[Constants.PROPERTIES]
-                ?.lines()
-                ?.map { it.trim() }
-                ?.filterNot { it.isEmpty() }
-                ?.map {
+            return properties[Constants.PROPERTIES].orEmpty()
+                .lines()
+                .map { it.trim() }
+                .filterNot { it.isEmpty() }
+                .map {
                     val i = it.indexOf("=")
                     if (i <= 0 || i == it.length - 1) return null
                     it.substring(0, i).trim() to it.substring(i + 1).trim()
-                }?.toMap()
+                }.toMap()
         }
 
         fun getCustomDataStorage(context: PolledTriggerContext): CustomDataStorage {
@@ -33,9 +33,9 @@ internal class TriggerUtil(private val myTimeService: TimeService) {
             return context.buildType.getCustomDataStorage(triggerServiceId + "_" + triggerId)
         }
 
-        fun getTargetTriggerPath(properties: Map<String, String>): String? =
+        fun getTargetTriggerPolicyPath(properties: Map<String, String>): String? =
             properties[Constants.TRIGGER_POLICY]
 
-        fun getTriggerName(path: String): String = File(path).nameWithoutExtension
+        fun getTriggerPolicyName(path: String): String = File(path).nameWithoutExtension
     }
 }

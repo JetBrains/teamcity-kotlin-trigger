@@ -1,5 +1,5 @@
 package jetbrains.buildServer.buildTriggers.remote
 
-interface TriggerService {
+interface CustomTriggerPolicy {
     fun triggerBuild(context: TriggerContext): Boolean
 }

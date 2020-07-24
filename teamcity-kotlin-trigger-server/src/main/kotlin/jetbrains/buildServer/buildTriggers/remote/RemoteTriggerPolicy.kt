@@ -29,59 +29,63 @@ class RemoteTriggerPolicy(myTimeService: TimeService) :
     }
 
     override fun triggerBuild(prev: String?, context: PolledTriggerContext): String? {
-        val triggerPath = TriggerUtil.getTargetTriggerPath(context.triggerDescriptor.properties) ?: run {
-            myLogger.debug("Trigger not specified, triggerBuild() invocation skipped")
+        val triggerPolicyPath = TriggerUtil.getTargetTriggerPolicyPath(context.triggerDescriptor.properties) ?: run {
+            myLogger.debug("Trigger policy not specified, triggerBuild() invocation skipped")
             return null
         }
 
-        doTriggerBuild(triggerPath, context, true)
+        doTriggerBuild(triggerPolicyPath, context, true)
         return null
     }
 
-    private fun uploadTrigger(triggerPath: String, onSuccess: () -> Unit = {}) {
-        val triggerName = TriggerUtil.getTriggerName(triggerPath)
+    private fun uploadTriggerPolicy(triggerPolicyPath: String, onSuccess: () -> Unit = {}) {
+        val triggerPolicyName = TriggerUtil.getTriggerPolicyName(triggerPolicyPath)
+        val triggerPolicyBytes = File(triggerPolicyPath).readBytes()
 
         val client = createClientIfNeeded {
             myLogger.debug("UploadTrigger action initialized a new connection")
         }
-        val triggerBytes = File(triggerPath).readBytes()
+
         try {
-            client.uploadTrigger(triggerName, TriggerBody(triggerBytes))
+            client.uploadTriggerPolicy(triggerPolicyName, TriggerPolicyBody(triggerPolicyBytes))
         } catch (se: ServerError) {
-            myLogger.error("Failed to upload trigger `$triggerName`, server responded with an error: $se")
+            myLogger.error("Failed to upload trigger policy `$triggerPolicyName`, server responded with an error: $se")
             return
         } catch (e: Throwable) {
-            myLogger.error("Failed to upload trigger `$triggerName` due to an unknown exception", e)
+            myLogger.error("Failed to upload trigger policy `$triggerPolicyName` due to an unknown exception", e)
             return
         }
         onSuccess()
     }
 
-    private fun doTriggerBuild(triggerPath: String, context: PolledTriggerContext, shouldTryUpload: Boolean = true) {
-        val triggerName = TriggerUtil.getTriggerName(triggerPath)
+    private fun doTriggerBuild(triggerPolicyPath: String, context: PolledTriggerContext, shouldTryUpload: Boolean = true) {
+        val triggerPolicyName = TriggerUtil.getTriggerPolicyName(triggerPolicyPath)
         val triggerBuildContext = myTriggerUtil.createTriggerBuildContext(context)
         val client = createClientIfNeeded {
             myLogger.debug("TriggerBuild action initialized a new connection")
         }
 
         val triggerBuildResponse = try {
-            client.sendTriggerBuild(triggerName, triggerBuildContext)
-        } catch (e: TriggerDoesNotExistError) {
-            myLogger.warn(e.message ?: "Trigger '$triggerName' does not exist on the server")
+            client.sendTriggerBuild(triggerPolicyName, triggerBuildContext)
+        } catch (e: TriggerPolicyDoesNotExistError) {
+            myLogger.warn(e.message ?: "Trigger policy '$triggerPolicyName' does not exist on the server")
             if (shouldTryUpload) {
                 myLogger.debug("TriggerBuild action failed and invoked UploadTrigger")
-                uploadTrigger(triggerPath) {
+                uploadTriggerPolicy(triggerPolicyPath) {
                     myLogger.debug("UploadTrigger action succeeded and invoked TriggerBuild")
-                    doTriggerBuild(triggerPath, context, false)
+                    doTriggerBuild(triggerPolicyPath, context, false)
                 }
-            } else myLogger.error("Trigger `$triggerName` won't be uploaded, TriggerBuild invocation skipped")
+            } else myLogger.error("Trigger policy `$triggerPolicyName` won't be uploaded, TriggerBuild invocation skipped")
 
             return
+        } catch (e: InternalTriggerPolicyError) {
+            myLogger.error("TriggerBuild invocation on trigger policy `$triggerPolicyName` caused an exception: $e")
+            return
         } catch (se: ServerError) {
-            myLogger.error("Failed to call TriggerBuild on trigger `$triggerName`, server responded with an error: $se")
+            myLogger.error("Failed to call TriggerBuild on trigger policy `$triggerPolicyName`, server responded with an error: $se")
             return
         } catch (e: Throwable) {
-            myLogger.error("Failed to call TriggerBuild on trigger `$triggerName` due to an unknown exception", e)
+            myLogger.error("Failed to call TriggerBuild on trigger policy `$triggerPolicyName` due to an unknown exception", e)
             return
         }
 
@@ -90,9 +94,9 @@ class RemoteTriggerPolicy(myTimeService: TimeService) :
                 .putValues(triggerBuildResponse.customData)
 
             if (triggerBuildResponse.answer)
-                context.buildType.addToQueue(triggerName)
+                context.buildType.addToQueue(triggerPolicyName)
         } else {
-            myLogger.debug("Failed to call TriggerBuild on trigger '$triggerName'")
+            myLogger.debug("Failed to call TriggerBuild on trigger policy '$triggerPolicyName'")
         }
     }
 

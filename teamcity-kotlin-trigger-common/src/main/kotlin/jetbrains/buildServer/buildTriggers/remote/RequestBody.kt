@@ -8,4 +8,4 @@ class TriggerContext(
     val customData: MutableMap<String, String>
 ): RequestBody()
 
-class TriggerBody(val bytes: ByteArray): RequestBody()
+class TriggerPolicyBody(val bytes: ByteArray): RequestBody()

@@ -25,15 +25,15 @@ class RemoteTriggerService(
 
     override fun describeTrigger(buildTriggerDescriptor: BuildTriggerDescriptor): String {
         val properties = buildTriggerDescriptor.properties
-        val triggerPath = TriggerUtil.getTargetTriggerPath(properties)
-            ?: return "Trigger is not selected"
+        val triggerPolicyPath = TriggerUtil.getTargetTriggerPolicyPath(properties)
+            ?: return "Trigger policy is not selected"
 
-        return "Uses ${TriggerUtil.getTriggerName(triggerPath)}"
+        return "Uses ${TriggerUtil.getTriggerPolicyName(triggerPolicyPath)}"
     }
 
     override fun getTriggerPropertiesProcessor() =
         PropertiesProcessor { properties: Map<String, String> ->
-            val triggerPolicy = TriggerUtil.getTargetTriggerPath(properties)
+            val triggerPolicy = TriggerUtil.getTargetTriggerPolicyPath(properties)
             val triggerProperties = TriggerUtil.parseTriggerProperties(properties)
 
             val rv = mutableListOf<InvalidProperty>()
