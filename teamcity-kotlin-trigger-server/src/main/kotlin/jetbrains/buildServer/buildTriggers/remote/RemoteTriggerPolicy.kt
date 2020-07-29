@@ -10,9 +10,7 @@ import java.io.File
 private const val host = "localhost"
 private const val port = 8080
 
-class RemoteTriggerPolicy(myTimeService: TimeService) :
-    BaseAsyncPolledBuildTrigger() {
-
+class RemoteTriggerPolicy(myTimeService: TimeService) : BaseAsyncPolledBuildTrigger() {
     private val myLogger = Logger.getInstance(RemoteTriggerPolicy::class.qualifiedName)
     private val myTriggerUtil = TriggerUtil(myTimeService)
     private lateinit var myKtorClient: KtorClient
@@ -38,26 +36,6 @@ class RemoteTriggerPolicy(myTimeService: TimeService) :
         return null
     }
 
-    private fun uploadTriggerPolicy(triggerPolicyPath: String, onSuccess: () -> Unit = {}) {
-        val triggerPolicyName = TriggerUtil.getTriggerPolicyName(triggerPolicyPath)
-        val triggerPolicyBytes = File(triggerPolicyPath).readBytes()
-
-        val client = createClientIfNeeded {
-            myLogger.debug("UploadTrigger action initialized a new connection")
-        }
-
-        try {
-            client.uploadTriggerPolicy(triggerPolicyName, TriggerPolicyBody(triggerPolicyBytes))
-        } catch (se: ServerError) {
-            myLogger.error("Failed to upload trigger policy `$triggerPolicyName`, server responded with an error: $se")
-            return
-        } catch (e: Throwable) {
-            myLogger.error("Failed to upload trigger policy `$triggerPolicyName` due to an unknown exception", e)
-            return
-        }
-        onSuccess()
-    }
-
     private fun doTriggerBuild(triggerPolicyPath: String, context: PolledTriggerContext, shouldTryUpload: Boolean = true) {
         val triggerPolicyName = TriggerUtil.getTriggerPolicyName(triggerPolicyPath)
         val triggerBuildContext = myTriggerUtil.createTriggerBuildContext(context)
@@ -78,9 +56,6 @@ class RemoteTriggerPolicy(myTimeService: TimeService) :
             } else myLogger.error("Trigger policy `$triggerPolicyName` won't be uploaded, TriggerBuild invocation skipped")
 
             return
-        } catch (e: InternalTriggerPolicyError) {
-            myLogger.error("TriggerBuild invocation on trigger policy `$triggerPolicyName` caused an exception: $e")
-            return
         } catch (se: ServerError) {
             myLogger.error("Failed to call TriggerBuild on trigger policy `$triggerPolicyName`, server responded with an error: $se")
             return
@@ -98,6 +73,26 @@ class RemoteTriggerPolicy(myTimeService: TimeService) :
         } else {
             myLogger.debug("Failed to call TriggerBuild on trigger policy '$triggerPolicyName'")
         }
+    }
+
+    private fun uploadTriggerPolicy(triggerPolicyPath: String, onSuccess: () -> Unit = {}) {
+        val triggerPolicyName = TriggerUtil.getTriggerPolicyName(triggerPolicyPath)
+        val triggerPolicyBytes = File(triggerPolicyPath).readBytes()
+
+        val client = createClientIfNeeded {
+            myLogger.debug("UploadTrigger action initialized a new connection")
+        }
+
+        try {
+            client.uploadTriggerPolicy(triggerPolicyName, TriggerPolicyBody(triggerPolicyBytes))
+        } catch (se: ServerError) {
+            myLogger.error("Failed to upload trigger policy `$triggerPolicyName`, server responded with an error: $se")
+            return
+        } catch (e: Throwable) {
+            myLogger.error("Failed to upload trigger policy `$triggerPolicyName` due to an unknown exception", e)
+            return
+        }
+        onSuccess()
     }
 
     private fun createClientIfNeeded(onCreate: () -> Unit = {}): KtorClient = synchronized(this) {

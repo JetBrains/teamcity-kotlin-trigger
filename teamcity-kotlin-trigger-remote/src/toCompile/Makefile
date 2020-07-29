@@ -5,7 +5,7 @@ OUT = ${ROOT_PLUGIN_DATA}\teamcityKotlinTrigger
 
 .PHONY: clearUnnecessary
 
-all: ScheduleTriggerPolicy.jar DemandTriggerPolicy.jar ErroneousTriggerPolicy.jar AlternatingTriggerPolicy.jar
+all: ScheduleTriggerPolicy.jar DemandTriggerPolicy.jar ErroneousTriggerPolicy.jar AlternatingTriggerPolicy.jar HangingTriggerPolicy.jar
 
 %.jar: %.kt $(IMPORTS)
 	$(KC) $^ -d $(OUT)\$@

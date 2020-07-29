@@ -29,7 +29,7 @@ internal class KtorServer(
 ) {
     private val myLogger = Logger.getLogger(KtorServer::class.qualifiedName)
     private val myServer = createServer()
-    private val myActionHandler = ActionHandler(myTriggerPolicyManager, myLogger)
+    private val myTriggerActions = TriggerActions(myTriggerPolicyManager, myLogger)
 
     init {
         myServer.start(wait = true)
@@ -75,12 +75,12 @@ internal class KtorServer(
 
             handleRoute(RequestMapping.triggerBuild(triggerPolicyNameParam)) {
                 respondWithErrorsHandled {
-                    withTriggerNameAndRequestBody(myActionHandler::triggerBuild)
+                    withTriggerNameAndRequestBody(myTriggerActions::triggerBuild)
                 }
             }
             handleRoute(RequestMapping.uploadTriggerPolicy(triggerPolicyNameParam)) {
                 respondWithErrorsHandled {
-                    withTriggerNameAndRequestBody(myActionHandler::saveTriggerPolicy)
+                    withTriggerNameAndRequestBody(myTriggerActions::saveTriggerPolicy)
                 }
             }
         }

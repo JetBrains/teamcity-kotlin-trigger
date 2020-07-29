@@ -25,6 +25,7 @@ class NoTriggerPolicyNameError internal constructor(msg: String) : ServerError(m
 class ContentTypeMismatchError internal constructor(msg: String) : ServerError(msg)
 class TriggerPolicyDoesNotExistError internal constructor(msg: String) : ServerError(msg)
 class TriggerPolicyLoadingError internal constructor(msg: String) : ServerError(msg)
+class TriggerInvocationTimeoutError internal constructor(msg: String) : ServerError(msg)
 class InternalTriggerPolicyError internal constructor(msg: String) : ServerError(msg)
 class InternalServerError internal constructor(msg: String) : ServerError(msg)
 
@@ -32,7 +33,12 @@ class InternalServerError internal constructor(msg: String) : ServerError(msg)
     otherwise, deserialization may break due to how Jackson decides what objects to pass to the constructor */
 fun noTriggerPolicyNameError() = NoTriggerPolicyNameError("Trigger policy name not specified in request path")
 fun contentTypeMismatchError(e: Throwable) = ContentTypeMismatchError("Request body expected to be of type: $e")
-fun triggerPolicyDoesNotExistError(triggerName: String) = TriggerPolicyDoesNotExistError("Trigger policy '$triggerName' does not exist")
+fun triggerPolicyDoesNotExistError(triggerName: String) =
+    TriggerPolicyDoesNotExistError("Trigger policy '$triggerName' does not exist")
+
 fun triggerPolicyLoadingError(e: Throwable) = TriggerPolicyLoadingError("Exception while loading a trigger policy: $e")
+fun triggerInvocationTimeoutError(triggerName: String) =
+    InternalTriggerPolicyError("Time limit exceeded on trigger $triggerName invocation")
+
 fun internalTriggerPolicyError(e: Throwable) = InternalTriggerPolicyError("Trigger invocation caused an exception: $e")
 fun internalServerError(e: Throwable) = InternalServerError("Internal server error: $e")
