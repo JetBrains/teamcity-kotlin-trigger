@@ -5,4 +5,5 @@
        default-autowire="constructor">
     <bean class="jetbrains.buildServer.buildTriggers.remote.RemoteTriggerService"></bean>
     <bean class="jetbrains.buildServer.buildTriggers.remote.controller.RemoteTriggersController"></bean>
+    <bean class="jetbrains.buildServer.buildTriggers.remote.projectExtension.CustomTriggersTab"></bean>
 </beans>
