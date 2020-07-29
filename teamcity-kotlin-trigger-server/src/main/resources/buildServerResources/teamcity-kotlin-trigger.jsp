@@ -16,8 +16,8 @@
         <label for="<%=Constants.TRIGGER_POLICY%>">Triggering policy:</label>
         <props:selectProperty name="<%=Constants.TRIGGER_POLICY%>">
             <props:option value="">-- Choose a triggering policy --</props:option>
-            <c:forEach items="${remoteTriggersBean.fileNames}" var="fileName">
-                <props:option value="${remoteTriggersBean.getFullPathTo(fileName)}">${fileName}</props:option>
+            <c:forEach items="${remoteTriggersBean.files}" var="file">
+                <props:option value="${file.absolutePath}">${file.name}</props:option>
             </c:forEach>
         </props:selectProperty>
         <span class="error" id="error_<%=Constants.TRIGGER_POLICY%>"></span>
