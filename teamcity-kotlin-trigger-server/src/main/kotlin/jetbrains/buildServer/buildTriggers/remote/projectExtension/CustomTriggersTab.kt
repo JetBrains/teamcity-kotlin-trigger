@@ -1,24 +1,17 @@
 package jetbrains.buildServer.buildTriggers.remote.projectExtension
 
-import jetbrains.buildServer.serverSide.ProjectManager
-import jetbrains.buildServer.serverSide.SProject
-import jetbrains.buildServer.users.SUser
-import jetbrains.buildServer.web.openapi.PagePlaces
-import jetbrains.buildServer.web.openapi.PluginDescriptor
-import jetbrains.buildServer.web.openapi.project.ProjectTab
-import javax.servlet.http.HttpServletRequest
+import jetbrains.buildServer.web.openapi.*
 
-class CustomTriggersTab(pagePlaces: PagePlaces, projectManager: ProjectManager, pluginDescriptor: PluginDescriptor) :
-    ProjectTab(
-        "customTriggersTab",
-        "Custom triggers",
+class CustomTriggersTab(pagePlaces: PagePlaces, pluginDescriptor: PluginDescriptor) :
+    SimpleCustomTab(
         pagePlaces,
-        projectManager,
-        pluginDescriptor.getPluginResourcesPath("customTriggersTab.jsp")
+        PlaceId.EDIT_PROJECT_PAGE_TAB,
+        "customTriggers",
+        pluginDescriptor.getPluginResourcesPath("customTriggersTab.jsp"),
+        "Custom Triggers"
     ) {
-    override fun fillModel(model: MutableMap<String, Any>, req: HttpServletRequest, project: SProject, user: SUser?) {
-        // FIXME: nothing yet
+    init {
+        setPosition(PositionConstraint.last())
+        register()
     }
-
-
 }
