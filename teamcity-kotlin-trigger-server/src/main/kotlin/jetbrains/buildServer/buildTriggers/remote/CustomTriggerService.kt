@@ -9,7 +9,7 @@ import jetbrains.buildServer.serverSide.PropertiesProcessor
 import jetbrains.buildServer.util.TimeService
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 
-class RemoteTriggerService(
+class CustomTriggerService(
     private val myPluginDescriptor: PluginDescriptor,
     factory: AsyncPolledBuildTriggerFactory,
     timeService: TimeService
@@ -17,7 +17,7 @@ class RemoteTriggerService(
 
     private val myPolicy = factory.createBuildTrigger(
         RemoteTriggerPolicy(timeService),
-        Logger.getInstance(RemoteTriggerService::class.qualifiedName)
+        Logger.getInstance(CustomTriggerService::class.qualifiedName)
     )
 
     override fun getName() = "teamcityKotlinTrigger"
@@ -46,7 +46,7 @@ class RemoteTriggerService(
             rv
         }
 
-    override fun getEditParametersUrl() = myPluginDescriptor.getPluginResourcesPath("remoteTriggerController.html")
+    override fun getEditParametersUrl() = myPluginDescriptor.getPluginResourcesPath("customTriggerController.html")
 
     override fun isMultipleTriggersPerBuildTypeAllowed() = true
     override fun getBuildTriggeringPolicy() = myPolicy
