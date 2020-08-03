@@ -4,7 +4,7 @@
     <name>teamcityKotlinTrigger</name>
     <display-name>TeamCity Kotlin trigger</display-name>
     <version>@Version@</version>
-    <description>Remote triggers in Kotlin</description>
+    <description>Custom triggers in Kotlin</description>
     <download-url>Plugin download URL</download-url>
     <email>Plugin author e-mail</email>
     <vendor>

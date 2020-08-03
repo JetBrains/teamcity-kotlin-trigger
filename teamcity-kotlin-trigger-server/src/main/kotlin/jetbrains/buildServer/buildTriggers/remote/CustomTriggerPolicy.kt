@@ -3,6 +3,7 @@ package jetbrains.buildServer.buildTriggers.remote
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.buildTriggers.PolledTriggerContext
 import jetbrains.buildServer.buildTriggers.async.BaseAsyncPolledBuildTrigger
+import jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggersManager
 import jetbrains.buildServer.buildTriggers.remote.ktor.KtorClient
 import jetbrains.buildServer.util.TimeService
 import java.io.File
@@ -10,9 +11,11 @@ import java.io.File
 private const val host = "localhost"
 private const val port = 8080
 
-class RemoteTriggerPolicy(myTimeService: TimeService) : BaseAsyncPolledBuildTrigger() {
+class RemoteTriggerPolicy(
+    private val myTimeService: TimeService,
+    private val myCustomTriggersBean: CustomTriggersManager
+) : BaseAsyncPolledBuildTrigger() {
     private val myLogger = Logger.getInstance(RemoteTriggerPolicy::class.qualifiedName)
-    private val myTriggerUtil = TriggerUtil(myTimeService)
     private lateinit var myKtorClient: KtorClient
 
     override fun triggerActivated(context: PolledTriggerContext) {
@@ -31,14 +34,25 @@ class RemoteTriggerPolicy(myTimeService: TimeService) : BaseAsyncPolledBuildTrig
             myLogger.debug("Trigger policy not specified, triggerBuild() invocation skipped")
             return null
         }
+        if (myCustomTriggersBean.isTriggerPolicyUpdated(triggerPolicyPath)) {
+            val triggerPolicyName = TriggerUtil.getTriggerPolicyName(triggerPolicyPath)
+            myLogger.debug("Trigger policy '$triggerPolicyName' was updated and will be uploaded")
+            uploadTriggerPolicy(triggerPolicyPath) {
+                myCustomTriggersBean.setTriggerPolicyUpdated(triggerPolicyPath, false)
+            }
+        }
 
         doTriggerBuild(triggerPolicyPath, context, true)
         return null
     }
 
-    private fun doTriggerBuild(triggerPolicyPath: String, context: PolledTriggerContext, shouldTryUpload: Boolean = true) {
+    private fun doTriggerBuild(
+        triggerPolicyPath: String,
+        context: PolledTriggerContext,
+        shouldTryUpload: Boolean = true
+    ) {
         val triggerPolicyName = TriggerUtil.getTriggerPolicyName(triggerPolicyPath)
-        val triggerBuildContext = myTriggerUtil.createTriggerBuildContext(context)
+        val triggerBuildContext = TriggerUtil.createTriggerBuildContext(context, myTimeService)
         val client = createClientIfNeeded {
             myLogger.debug("TriggerBuild action initialized a new connection")
         }
@@ -60,7 +74,10 @@ class RemoteTriggerPolicy(myTimeService: TimeService) : BaseAsyncPolledBuildTrig
             myLogger.error("Failed to call TriggerBuild on trigger policy `$triggerPolicyName`, server responded with an error: $se")
             return
         } catch (e: Throwable) {
-            myLogger.error("Failed to call TriggerBuild on trigger policy `$triggerPolicyName` due to an unknown exception", e)
+            myLogger.error(
+                "Failed to call TriggerBuild on trigger policy `$triggerPolicyName` due to an unknown exception",
+                e
+            )
             return
         }
 

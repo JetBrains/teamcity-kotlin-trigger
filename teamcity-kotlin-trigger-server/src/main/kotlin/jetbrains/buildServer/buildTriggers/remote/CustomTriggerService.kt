@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.buildTriggers.BuildTriggerDescriptor
 import jetbrains.buildServer.buildTriggers.BuildTriggerService
 import jetbrains.buildServer.buildTriggers.async.AsyncPolledBuildTriggerFactory
+import jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggersManager
 import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.PropertiesProcessor
 import jetbrains.buildServer.util.TimeService
@@ -12,16 +13,17 @@ import jetbrains.buildServer.web.openapi.PluginDescriptor
 class CustomTriggerService(
     private val myPluginDescriptor: PluginDescriptor,
     factory: AsyncPolledBuildTriggerFactory,
-    timeService: TimeService
+    timeService: TimeService,
+    customTriggersBean: CustomTriggersManager
 ) : BuildTriggerService() {
 
     private val myPolicy = factory.createBuildTrigger(
-        RemoteTriggerPolicy(timeService),
+        RemoteTriggerPolicy(timeService, customTriggersBean),
         Logger.getInstance(CustomTriggerService::class.qualifiedName)
     )
 
     override fun getName() = "teamcityKotlinTrigger"
-    override fun getDisplayName() = "Remote triggers"
+    override fun getDisplayName() = "Custom Trigger..."
 
     override fun describeTrigger(buildTriggerDescriptor: BuildTriggerDescriptor): String {
         val properties = buildTriggerDescriptor.properties
@@ -39,7 +41,7 @@ class CustomTriggerService(
             val rv = mutableListOf<InvalidProperty>()
 
             if (triggerPolicy.isNullOrBlank())
-                rv.add(InvalidProperty(Constants.TRIGGER_POLICY, "A trigger policy should be specified"))
+                rv.add(InvalidProperty(Constants.TRIGGER_POLICY_PATH, "A trigger policy should be specified"))
             if (triggerProperties == null)
                 rv.add(InvalidProperty(Constants.PROPERTIES, "Properties should be 'key=value' pairs on separate lines"))
 

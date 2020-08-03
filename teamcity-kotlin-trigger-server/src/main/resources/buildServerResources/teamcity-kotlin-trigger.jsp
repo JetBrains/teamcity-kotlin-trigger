@@ -3,24 +3,20 @@
 <%@ taglib prefix="props" tagdir="/WEB-INF/tags/props" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <jsp:useBean id="propertiesBean" type="jetbrains.buildServer.controllers.BasePropertiesBean" scope="request"/>
-<jsp:useBean id="customTriggersBean" type="jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggersBean"
+<jsp:useBean id="customTriggersManager" type="jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggersManager"
              scope="request"/>
+<jsp:useBean id="project" type="jetbrains.buildServer.serverSide.SProject" scope="request"/>
 
-<tr class="noBorder">
-    <td>
-        <em>Choose one trigger from the list below</em>
-    </td>
-</tr>
 <tr>
     <td>
-        <label for="<%=Constants.TRIGGER_POLICY%>">Triggering policy:</label>
-        <props:selectProperty name="<%=Constants.TRIGGER_POLICY%>">
+        <label for="<%=Constants.TRIGGER_POLICY_PATH%>">Triggering policy:</label>
+        <props:selectProperty name="<%=Constants.TRIGGER_POLICY_PATH%>">
             <props:option value="">-- Choose a triggering policy --</props:option>
-            <c:forEach items="${customTriggersBean.files}" var="file">
-                <props:option value="${file.absolutePath}">${file.name}</props:option>
+            <c:forEach items="${customTriggersManager.allUsableCustomTriggerFiles(project)}" var="trigger">
+                <props:option value="${trigger.filePath}">${trigger.fileName}</props:option>
             </c:forEach>
         </props:selectProperty>
-        <span class="error" id="error_<%=Constants.TRIGGER_POLICY%>"></span>
+        <span class="error" id="error_<%=Constants.TRIGGER_POLICY_PATH%>"></span>
     </td>
 </tr>
 <tr>

@@ -3,11 +3,11 @@
 
 <script type="text/javascript">
     <c:choose>
-    <c:when test="${not empty error}">
-    parent.${jsBase}.error("${util:forJS(error, true, false)}");
-    </c:when>
-    <c:otherwise>
-    parent.${jsBase}.closeAndRefresh('${refreshParam}');
-    </c:otherwise>
+        <c:when test="${not empty error}">
+            parent.${jsBase}.error("${util:forJS(error, true, false)}");
+        </c:when>
+        <c:otherwise>
+            parent.${jsBase}.closeAndRefresh('${refreshParam}');
+        </c:otherwise>
     </c:choose>
 </script>
