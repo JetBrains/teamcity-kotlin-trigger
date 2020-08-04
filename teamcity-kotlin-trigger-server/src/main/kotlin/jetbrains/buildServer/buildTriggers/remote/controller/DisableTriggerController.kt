@@ -1,11 +1,7 @@
 package jetbrains.buildServer.buildTriggers.remote.controller
 
 import com.intellij.openapi.diagnostic.Logger
-import jetbrains.buildServer.buildTriggers.BuildTriggerDescriptor
-import jetbrains.buildServer.buildTriggers.remote.Constants
 import jetbrains.buildServer.controllers.BaseController
-import jetbrains.buildServer.serverSide.BuildTypeIdentity
-import jetbrains.buildServer.serverSide.BuildTypeSettings
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.web.openapi.WebControllerManager
@@ -47,54 +43,8 @@ internal class DisableTriggerController(
             return null
 
         val customDataStorage = project.getCustomDataStorage(DisableTriggerController::class.qualifiedName!!)
-
-        if (enable) {
-            val disabledIds = customDataStorage.values
-                ?.filterNot { it.value?.toBoolean() ?: true } // filter out enabled triggers
-                ?.keys
-                ?: emptySet()
-            project.buildTypeTemplates.enableTriggersOfPolicyPath(triggerPolicyPath, disabledIds)
-            project.buildTypes.enableTriggersOfPolicyPath(triggerPolicyPath, disabledIds)
-
-            disabledIds.forEach {
-                customDataStorage.putValue(it, "true") // mark as enabled
-            }
-            customDataStorage.putValue(triggerPolicyPath, "true")
-        } else {
-            val disabledFromTemplates = project.buildTypeTemplates.disableTriggersOfPolicyPath(triggerPolicyPath)
-            val disabledFromBuildTypes = project.buildTypes.disableTriggersOfPolicyPath(triggerPolicyPath)
-
-            disabledFromTemplates.forEach { customDataStorage.putValue(it, "false") }
-            disabledFromBuildTypes.forEach { customDataStorage.putValue(it, "false") }
-
-            customDataStorage.putValue(triggerPolicyPath, "false")
-        }
+        customDataStorage.putValue(triggerPolicyPath, enable.toString())
 
         return null
     }
-
-    private fun <T> Collection<T>.disableTriggersOfPolicyPath(triggerPolicyPath: String): Collection<String>
-            where T : BuildTypeSettings,
-                  T : BuildTypeIdentity = flatMap { settings ->
-        settings.buildTriggersCollection.filter {
-            it.properties[Constants.TRIGGER_POLICY_PATH] == triggerPolicyPath &&
-                    settings.isEnabled(it.id)
-        }.map {
-            settings.setEnabled(it.id, false)
-            commonId(settings, it)
-        }
-    }
-
-    private fun <T> Collection<T>.enableTriggersOfPolicyPath(triggerPolicyPath: String, disabledIds: Collection<String>)
-            where T : BuildTypeSettings,
-                  T : BuildTypeIdentity = forEach { settings ->
-        settings.buildTriggersCollection.filter {
-            it.properties[Constants.TRIGGER_POLICY_PATH] == triggerPolicyPath && commonId(settings, it) in disabledIds
-        }.forEach {
-            settings.setEnabled(it.id, true)
-        }
-    }
-
-    private fun commonId(buildTypeIdentity: BuildTypeIdentity, buildTriggerDescriptor: BuildTriggerDescriptor) =
-        buildTypeIdentity.externalId + "_" + buildTriggerDescriptor.id
 }

@@ -53,28 +53,28 @@
         </tr>
         </thead>
         <c:forEach var="localTrigger" items="${localTriggers}">
-            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(localTrigger.filePath, project)}"/>
+            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(localTrigger.filePath)}"/>
             <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
-                <c:set var="usageProjects" value="${localTrigger.getUsagesInProjectAndSubprojects(project)}"/>
+                <c:set var="usages" value="${localTrigger.getUsagesInProjectAndSubprojects(project)}"/>
                 <td>
-                    <c:out value="${localTrigger.fileName}"/>
+                    <c:out value="${localTrigger.policyName}"/>
                     <c:if test="${not enabled}">
                         <span class="inheritedParam">(disabled)</span>
                     </c:if>
                 </td>
                 <td colspan="${canEditProject ? 1 : 2}">
-                    <c:if test="${empty usageProjects}">
+                    <c:if test="${empty usages}">
                         No usages
                     </c:if>
-                    <c:forEach var="usageProject" items="${usageProjects}">
-                        <c:out value="${usageProject.fullName}"/><br>
+                    <c:forEach var="usage" items="${usages}">
+                        <c:out value="${usage.fullName}"/><br>
                     </c:forEach>
                 </td>
                 <c:if test="${canEditProject}">
                     <td class="edit" style="border: 1px solid #ccc">
                         <c:set var="canEditSubprojects"
-                               value="${customTriggersManager.canEditProjects(usageProjects)}"/>
-                        <bs:actionsPopup controlId="pA_local_${localTrigger.fileName}"
+                               value="${customTriggersManager.canEdit(usages)}"/>
+                        <bs:actionsPopup controlId="pA_local_${localTrigger.policyName}"
                                          popup_options="shift: {x: -150, y: 20}, className: 'quickLinksMenuPopup'">
                             <jsp:attribute name="content">
                               <div>
@@ -85,27 +85,29 @@
                                            title="Update trigger policy">Update...</a>
                                       </l:li>
                                       <c:if test="${canEditSubprojects}">
-                                          <c:choose>
-                                              <c:when test="${enabled}">
-                                                  <l:li>
-                                                      <a href="#"
-                                                         onclick="return BS.TriggerPolicy.setEnabled(String.raw`${localTrigger.filePath}`, false)"
-                                                         title="Disable all triggers of this policy">Disable...</a>
-                                                  </l:li>
-                                              </c:when>
-                                              <c:otherwise>
-                                                  <l:li>
-                                                      <a href="#"
-                                                         onclick="return BS.TriggerPolicy.setEnabled(String.raw`${localTrigger.filePath}`, true)"
-                                                         title="Enable all triggers of this policy">Enable...</a>
-                                                  </l:li>
-                                              </c:otherwise>
-                                          </c:choose>
-                                          <c:if test="${empty usageProjects}">
+                                          <c:if test="${not empty usages}">
+                                              <c:choose>
+                                                  <c:when test="${enabled}">
+                                                      <l:li>
+                                                          <a href="#"
+                                                             onclick="return BS.TriggerPolicy.setEnabled(String.raw`${localTrigger.filePath}`, false)"
+                                                             title="Disable all triggers of this policy">Disable...</a>
+                                                      </l:li>
+                                                  </c:when>
+                                                  <c:otherwise>
+                                                      <l:li>
+                                                          <a href="#"
+                                                             onclick="return BS.TriggerPolicy.setEnabled(String.raw`${localTrigger.filePath}`, true)"
+                                                             title="Enable all triggers of this policy">Enable...</a>
+                                                      </l:li>
+                                                  </c:otherwise>
+                                              </c:choose>
+                                          </c:if>
+                                          <c:if test="${empty usages}">
                                               <l:li>
                                                   <a href="#"
-                                                     onclick="return BS.TriggerPolicy.delete(String.raw`${localTrigger.fileName}`)"
-                                                     title="Delete this policy and all its triggers">Delete...</a>
+                                                     onclick="return BS.TriggerPolicy.delete(String.raw`${localTrigger.fileName}`, String.raw`${localTrigger.policyName}`)"
+                                                     title="Delete this policy">Delete...</a>
                                               </l:li>
                                           </c:if>
                                       </c:if>
@@ -136,21 +138,21 @@
         </tr>
         </thead>
         <c:forEach var="inheritedTrigger" items="${inheritedTriggers}">
-            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(inheritedTrigger.filePath, project)}"/>
+            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(inheritedTrigger.filePath)}"/>
             <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
                 <td>
-                    <c:out value="${inheritedTrigger.fileName}"/>
+                    <c:out value="${inheritedTrigger.policyName}"/>
                     <c:if test="${not enabled}">
                         <span class="inheritedParam">(disabled)</span>
                     </c:if>
                 </td>
                 <td>
-                    <c:set var="usageProjects" value="${inheritedTrigger.getUsagesInProjectAndSubprojects(project)}"/>
-                    <c:if test="${empty usageProjects}">
+                    <c:set var="usages" value="${inheritedTrigger.getUsagesInProjectAndSubprojects(project)}"/>
+                    <c:if test="${empty usages}">
                         No usages
                     </c:if>
-                    <c:forEach var="usageProject" items="${usageProjects}">
-                        <c:out value="${usageProject.fullName}"/><br>
+                    <c:forEach var="usage" items="${usages}">
+                        <c:out value="${usage.fullName}"/><br>
                     </c:forEach>
                 </td>
                 <td>
@@ -233,14 +235,14 @@
                 cancelButtonText: 'Cancel',
                 title: action + ' triggering policy',
                 action: function () {
-                    var completed = $j.Deferred();
+                    let completed = $j.Deferred();
                     BS.ajaxRequest(window["base_uri"] + '${DisableTriggerController.REQUEST_PATH}', {
                         parameters: {
                             triggerPolicyPath,
                             enable,
                             projectId: '${project.projectId}'
                         },
-                        onComplete: function (transport) {
+                        onComplete: function () {
                             completed.resolve();
                             BS.reload(true);
                         }
@@ -250,20 +252,20 @@
             });
         },
 
-        delete: function (fileName) {
+        delete: function (fileName, policyName) {
             BS.confirmDialog.show({
-                text: 'Delete "' + fileName + '" triggering policy?',
+                text: 'Delete "' + policyName + '" triggering policy?',
                 actionButtonText: 'Delete',
                 cancelButtonText: 'Cancel',
                 title: 'Delete triggering policy',
                 action: function () {
-                    var completed = $j.Deferred();
+                    let completed = $j.Deferred();
                     BS.ajaxRequest(window["base_uri"] + '${DeleteTriggerController.REQUEST_PATH}', {
                         parameters: {
                             fileName,
                             projectId: '${project.projectId}'
                         },
-                        onComplete: function (transport) {
+                        onComplete: function () {
                             completed.resolve();
                             BS.reload(true);
                         }

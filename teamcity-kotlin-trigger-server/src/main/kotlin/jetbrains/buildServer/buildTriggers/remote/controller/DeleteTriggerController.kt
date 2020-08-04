@@ -33,9 +33,8 @@ internal class DeleteTriggerController(
 
         val triggerJarName = request.getParameter("fileName") ?: return null
         val pluginDataDirectory = project.getPluginDataDirectory(myPluginDescriptor.pluginName)
-        val triggerFile = File(pluginDataDirectory, triggerJarName)
-        triggerFile.delete()
 
+        File(pluginDataDirectory, triggerJarName).delete()
         return null
     }
 }

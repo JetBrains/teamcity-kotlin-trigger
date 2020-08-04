@@ -14,11 +14,11 @@ class CustomTriggerService(
     private val myPluginDescriptor: PluginDescriptor,
     factory: AsyncPolledBuildTriggerFactory,
     timeService: TimeService,
-    customTriggersBean: CustomTriggersManager
+    private val myCustomTriggersBean: CustomTriggersManager
 ) : BuildTriggerService() {
 
     private val myPolicy = factory.createBuildTrigger(
-        RemoteTriggerPolicy(timeService, customTriggersBean),
+        RemoteTriggerPolicy(timeService, myCustomTriggersBean),
         Logger.getInstance(CustomTriggerService::class.qualifiedName)
     )
 
@@ -30,7 +30,11 @@ class CustomTriggerService(
         val triggerPolicyPath = TriggerUtil.getTargetTriggerPolicyPath(properties)
             ?: return "Trigger policy is not selected"
 
-        return "Uses ${TriggerUtil.getTriggerPolicyName(triggerPolicyPath)}"
+        val disabledStatus =
+            if (myCustomTriggersBean.isTriggerPolicyEnabled(triggerPolicyPath)) ""
+            else " (disabled)"
+
+        return "Uses ${TriggerUtil.getTriggerPolicyName(triggerPolicyPath)}" + disabledStatus
     }
 
     override fun getTriggerPropertiesProcessor() =
@@ -43,7 +47,12 @@ class CustomTriggerService(
             if (triggerPolicy.isNullOrBlank())
                 rv.add(InvalidProperty(Constants.TRIGGER_POLICY_PATH, "A trigger policy should be specified"))
             if (triggerProperties == null)
-                rv.add(InvalidProperty(Constants.PROPERTIES, "Properties should be 'key=value' pairs on separate lines"))
+                rv.add(
+                    InvalidProperty(
+                        Constants.PROPERTIES,
+                        "Properties should be 'key=value' pairs on separate lines"
+                    )
+                )
 
             rv
         }

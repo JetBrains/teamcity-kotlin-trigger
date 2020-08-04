@@ -34,6 +34,9 @@ class RemoteTriggerPolicy(
             myLogger.debug("Trigger policy not specified, triggerBuild() invocation skipped")
             return null
         }
+        if (!myCustomTriggersBean.isTriggerPolicyEnabled(triggerPolicyPath))
+            return null
+
         if (myCustomTriggersBean.isTriggerPolicyUpdated(triggerPolicyPath)) {
             val triggerPolicyName = TriggerUtil.getTriggerPolicyName(triggerPolicyPath)
             myLogger.debug("Trigger policy '$triggerPolicyName' was updated and will be uploaded")
