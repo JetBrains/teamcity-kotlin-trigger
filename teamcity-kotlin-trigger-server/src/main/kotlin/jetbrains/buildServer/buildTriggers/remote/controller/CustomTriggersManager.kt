@@ -16,6 +16,11 @@ class CustomTriggersManager(
 
     fun isTriggerPolicyUpdated(path: String) = myTriggerPolicyUpdated.computeIfAbsent(path) { true }
 
+    fun isTriggerPolicyEnabled(path: String, project: SProject) =
+        DisableTriggerController.isTriggerPolicyEnabled(path, project)/*.also {
+            println("IS ENABLED CHECK: $path, $it")
+        }*/
+
     fun setTriggerPolicyUpdated(path: String, updated: Boolean) {
         myTriggerPolicyUpdated[path] = updated
     }

@@ -11,7 +11,7 @@ class CustomTriggersTab(
     pagePlaces: PagePlaces,
     myPluginDescriptor: PluginDescriptor,
     private val myProjectManager: ProjectManager,
-    private val myCustomTriggersBean: CustomTriggersManager
+    private val myCustomTriggersManager: CustomTriggersManager
 ) :
     SimpleCustomTab(
         pagePlaces,
@@ -32,7 +32,7 @@ class CustomTriggersTab(
         CustomTriggersController.run {
             val project = request.findProject(myProjectManager, myLogger)
             if (project != null) {
-                model["customTriggersBean"] = myCustomTriggersBean
+                model["customTriggersManager"] = myCustomTriggersManager
                 model["project"] = project
             }
         }

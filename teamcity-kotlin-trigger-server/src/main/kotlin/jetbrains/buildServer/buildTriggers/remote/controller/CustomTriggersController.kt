@@ -16,7 +16,7 @@ private const val templatePrefix = "template:"
 class CustomTriggersController(
     private val myProjectManager: ProjectManager,
     private val myPluginDescriptor: PluginDescriptor,
-    private val myCustomTriggersBean: CustomTriggersManager,
+    private val myCustomTriggersManager: CustomTriggersManager,
     myWebControllerManager: WebControllerManager
 ) : BaseController() {
     private val myLogger = Logger.getInstance(CustomTriggersController::class.qualifiedName)
@@ -32,7 +32,7 @@ class CustomTriggersController(
         val mv = ModelAndView(myPluginDescriptor.getPluginResourcesPath("teamcity-kotlin-trigger.jsp"))
         val project = req.findProject(myProjectManager, myLogger) ?: myProjectManager.rootProject
 
-        mv.model["customTriggersBean"] = myCustomTriggersBean
+        mv.model["customTriggersManager"] = myCustomTriggersManager
         mv.model["project"] = project
         return mv
     }
@@ -42,6 +42,11 @@ class CustomTriggersController(
             projectManager: ProjectManager,
             logger: Logger
         ): SProject? {
+            logger.debug("Request parameters are: " +
+                    parameterMap.entries.joinToString { (k, v) ->
+                        "'$k': " + v.joinToString(prefix = "[", postfix = "]") { it }
+                    })
+
             val projectId = getParameter("projectId")
 
             if (projectId != null) {

@@ -7,5 +7,7 @@
     <bean class="jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggersController"/>
     <bean class="jetbrains.buildServer.buildTriggers.remote.projectExtension.CustomTriggersTab"/>
     <bean class="jetbrains.buildServer.buildTriggers.remote.controller.UploadTriggerController"/>
+    <bean class="jetbrains.buildServer.buildTriggers.remote.controller.DisableTriggerController"/>
+    <bean class="jetbrains.buildServer.buildTriggers.remote.controller.DeleteTriggerController"/>
     <bean class="jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggersManager"/>
 </beans>

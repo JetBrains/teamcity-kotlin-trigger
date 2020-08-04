@@ -13,19 +13,20 @@ import java.io.File
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-class UploadTriggerController(
+internal class UploadTriggerController(
     private val myProjectManager: ProjectManager,
     private val myPluginDescriptor: PluginDescriptor,
-    private val myCustomTriggersBean: CustomTriggersManager,
+    private val myCustomTriggersManager: CustomTriggersManager,
     myWebControllerManager: WebControllerManager
 ) : MultipartFormController() {
     private val myLogger = Logger.getInstance(UploadTriggerController::class.qualifiedName)
 
     init {
-        myWebControllerManager.registerController(
-            "/admin/uploadCustomTriggerPolicy.html",
-            this
-        )
+        myWebControllerManager.registerController(REQUEST_PATH, this)
+    }
+
+    companion object {
+        const val REQUEST_PATH = "/admin/uploadCustomTriggerPolicy.html"
     }
 
     override fun doPost(request: HttpServletRequest, response: HttpServletResponse): ModelAndView {
@@ -33,26 +34,26 @@ class UploadTriggerController(
         val model = modelAndView.model
         model["jsBase"] = "BS.UploadTriggerDialog"
 
-        val project = CustomTriggersController.run {
-            request.findProject(myProjectManager, myLogger)
-        } ?: return modelAndView // FIXME: maybe error?
-
         val triggerJarName = request.getParameter("fileName")
         val updatedFileName = request.getParameter("updatedFileName")
 
         try {
+            val project = CustomTriggersController.run {
+                request.findProject(myProjectManager, myLogger)
+            } ?: throw UploadException("Failed to determine the project of the request")
+
             if (updatedFileName.isNullOrBlank()) {
-                if (project.hasLocalFile(triggerJarName, myCustomTriggersBean))
+                if (project.hasLocalFile(triggerJarName))
                     throw UploadException("File already exists")
             } else if (updatedFileName != triggerJarName)
                 throw UploadException("Uploaded jar's filename doesn't match the updated file's name")
 
             val ancestor = project.projectPath.dropLast(1)
-                .firstOrNull { it.hasLocalFile(triggerJarName, myCustomTriggersBean) }
+                .firstOrNull { it.hasLocalFile(triggerJarName) }
             if (ancestor != null)
                 throw UploadException("File is already loaded to this project's ancestor '${ancestor.fullName}'")
 
-            val descendant = project.ownProjects.firstOrNull { it.hasLocalFile(triggerJarName, myCustomTriggersBean) }
+            val descendant = project.ownProjects.firstOrNull { it.hasLocalFile(triggerJarName) }
             if (descendant != null)
                 throw UploadException("File is already loaded to this project's descendant '${descendant.fullName}'")
 
@@ -60,7 +61,7 @@ class UploadTriggerController(
             val triggerFile = File(pluginDataDirectory, triggerJarName)
 
             validateMultipart(request, triggerJarName).transferTo(triggerFile)
-            myCustomTriggersBean.setTriggerPolicyUpdated(triggerFile.absolutePath, true)
+            myCustomTriggersManager.setTriggerPolicyUpdated(triggerFile.absolutePath, true)
         } catch (e: Exception) {
             myLogger.warnAndDebugDetails("Error while uploading a trigger policy", e)
             model["error"] = e.message
@@ -70,8 +71,8 @@ class UploadTriggerController(
         return modelAndView
     }
 
-    private fun SProject.hasLocalFile(fileName: String, ctBean: CustomTriggersManager) =
-        ctBean.localCustomTriggers(this).any { it.fileName == fileName }
+    private fun SProject.hasLocalFile(fileName: String) =
+        myCustomTriggersManager.localCustomTriggers(this).any { it.fileName == fileName }
 
     private fun validateMultipart(
         request: HttpServletRequest,

@@ -4,7 +4,11 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="afn" uri="/WEB-INF/functions/authz" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
-<jsp:useBean id="customTriggersManager" type="jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggersManager"
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DeleteTriggerController" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DisableTriggerController" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.UploadTriggerController" %>
+<jsp:useBean id="customTriggersManager"
+             type="jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggersManager"
              scope="request"/>
 <jsp:useBean id="project" type="jetbrains.buildServer.serverSide.SProject" scope="request"/>
 
@@ -49,10 +53,14 @@
         </tr>
         </thead>
         <c:forEach var="localTrigger" items="${localTriggers}">
-            <tr class="triggerRow">
+            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(localTrigger.filePath, project)}"/>
+            <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
                 <c:set var="usageProjects" value="${localTrigger.getUsagesInProjectAndSubprojects(project)}"/>
                 <td>
                     <c:out value="${localTrigger.fileName}"/>
+                    <c:if test="${not enabled}">
+                        <span class="inheritedParam">(disabled)</span>
+                    </c:if>
                 </td>
                 <td colspan="${canEditProject ? 1 : 2}">
                     <c:if test="${empty usageProjects}">
@@ -64,7 +72,8 @@
                 </td>
                 <c:if test="${canEditProject}">
                     <td class="edit" style="border: 1px solid #ccc">
-                        <c:set var="canEditSubprojects" value="${customTriggersManager.canEditProjects(usageProjects)}"/>
+                        <c:set var="canEditSubprojects"
+                               value="${customTriggersManager.canEditProjects(usageProjects)}"/>
                         <bs:actionsPopup controlId="pA_local_${localTrigger.fileName}"
                                          popup_options="shift: {x: -150, y: 20}, className: 'quickLinksMenuPopup'">
                             <jsp:attribute name="content">
@@ -76,14 +85,26 @@
                                            title="Update trigger policy">Update...</a>
                                       </l:li>
                                       <c:if test="${canEditSubprojects}">
+                                          <c:choose>
+                                              <c:when test="${enabled}">
+                                                  <l:li>
+                                                      <a href="#"
+                                                         onclick="return BS.TriggerPolicy.setEnabled(String.raw`${localTrigger.filePath}`, false)"
+                                                         title="Disable all triggers of this policy">Disable...</a>
+                                                  </l:li>
+                                              </c:when>
+                                              <c:otherwise>
+                                                  <l:li>
+                                                      <a href="#"
+                                                         onclick="return BS.TriggerPolicy.setEnabled(String.raw`${localTrigger.filePath}`, true)"
+                                                         title="Enable all triggers of this policy">Enable...</a>
+                                                  </l:li>
+                                              </c:otherwise>
+                                          </c:choose>
+
                                           <l:li>
                                               <a href="#"
-                                                 onclick="return BS.TriggerPolicy.disable()"
-                                                 title="Disable all triggers of this policy">Disable...</a>
-                                          </l:li>
-                                          <l:li>
-                                              <a href="#"
-                                                 onclick="return BS.TriggerPolicy.delete()"
+                                                 onclick="return BS.TriggerPolicy.delete('${localTrigger.filePath}')"
                                                  title="Delete this policy and all its triggers">Delete...</a>
                                           </l:li>
                                       </c:if>
@@ -114,9 +135,13 @@
         </tr>
         </thead>
         <c:forEach var="inheritedTrigger" items="${inheritedTriggers}">
-            <tr class="triggerRow">
+            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(inheritedTrigger.filePath, project)}"/>
+            <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
                 <td>
                     <c:out value="${inheritedTrigger.fileName}"/>
+                    <c:if test="${not enabled}">
+                        <span class="inheritedParam">(disabled)</span>
+                    </c:if>
                 </td>
                 <td>
                     <c:set var="usageProjects" value="${inheritedTrigger.getUsagesInProjectAndSubprojects(project)}"/>
@@ -135,9 +160,10 @@
     </c:if>
 </table>
 
-<bs:dialog dialogId="uploadTriggerDialog" title="Upload trigger policy jar" closeCommand="BS.UploadTriggerDialog.close()"
+<bs:dialog dialogId="uploadTriggerDialog" title="Upload trigger policy jar"
+           closeCommand="BS.UploadTriggerDialog.close()"
            dialogClass="uploadDialog">
-    <forms:multipartForm id="uploadTriggerForm" action="uploadCustomTriggerPolicy.html" targetIframe="hidden-iframe"
+    <forms:multipartForm id="uploadTriggerForm" targetIframe="hidden-iframe"
                          onsubmit="return BS.UploadTriggerDialog.validate();">
         <input type="text" id="fileName" name="fileName" value="" class="mediumField" style="display:none;"/>
         <input type="text" id="projectId" name="projectId" value="${project.projectId}"
@@ -161,6 +187,8 @@
 </bs:dialog>
 
 <script type="text/javascript">
+    $j('#uploadTriggerForm').attr('action', window["base_uri"] + '${UploadTriggerController.REQUEST_PATH}');
+
     BS.UploadTriggerDialog = OO.extend(BS.AbstractWebForm, OO.extend(BS.AbstractModalDialog, OO.extend(BS.FileBrowse, {
         onFileChanged: function (filename) {
         },
@@ -195,7 +223,7 @@
             return BS.UploadTriggerDialog.open(updatedFileName);
         },
 
-        disable: function () {
+        setEnabled: function (triggerPolicyPath, enable) {
             BS.confirmDialog.show({
                 text: "Disable this triggering policy and all its triggers?",
                 actionButtonText: 'Disable',
@@ -203,8 +231,12 @@
                 title: 'Disable triggering policy',
                 action: function () {
                     var completed = $j.Deferred();
-                    BS.ajaxRequest(window["base_uri"] + "/admin/plugins.html", {
-                        parameters: {uuid: uuid, reload: true, action: "setEnabled"},
+                    BS.ajaxRequest(window["base_uri"] + '${DisableTriggerController.REQUEST_PATH}', {
+                        parameters: {
+                            triggerPolicyPath,
+                            enable,
+                            projectId: '${project.projectId}'
+                        },
                         onComplete: function (transport) {
                             completed.resolve();
                             BS.reload(true);
@@ -215,7 +247,7 @@
             });
         },
 
-        delete: function () {
+        delete: function (triggerPolicyPath) {
             BS.confirmDialog.show({
                 text: 'Delete this triggering policy and all its triggers?',
                 actionButtonText: 'Delete',
@@ -223,8 +255,11 @@
                 title: 'Delete triggering policy',
                 action: function () {
                     var completed = $j.Deferred();
-                    BS.ajaxRequest(window["base_uri"] + "/admin/plugins.html", {
-                        parameters: {uuid: uuid, reload: true, action: "setEnabled"},
+                    BS.ajaxRequest(window["base_uri"] + '${DeleteTriggerController.REQUEST_PATH}', {
+                        parameters: {
+                            triggerPolicyPath,
+                            projectId: '${project.projectId}'
+                        },
                         onComplete: function (transport) {
                             completed.resolve();
                             BS.reload(true);
