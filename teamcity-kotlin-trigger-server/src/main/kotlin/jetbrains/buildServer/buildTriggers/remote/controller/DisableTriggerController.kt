@@ -33,6 +33,7 @@ internal class DisableTriggerController(
                 ?: true
     }
 
+    // TODO: add logging
     override fun doHandle(request: HttpServletRequest, response: HttpServletResponse): ModelAndView? {
         val project = CustomTriggersController.run {
             request.findProject(myProjectManager, myLogger)
@@ -71,7 +72,6 @@ internal class DisableTriggerController(
 
         return null
     }
-
 
     private fun <T> Collection<T>.disableTriggersOfPolicyPath(triggerPolicyPath: String): Collection<String>
             where T : BuildTypeSettings,

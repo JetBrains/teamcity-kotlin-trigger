@@ -1,15 +1,20 @@
 package jetbrains.buildServer.buildTriggers.remote.controller
 
 import com.intellij.openapi.diagnostic.Logger
-import jetbrains.buildServer.buildTriggers.remote.Constants
 import jetbrains.buildServer.controllers.BaseController
-import jetbrains.buildServer.serverSide.BuildTypeSettings
+import jetbrains.buildServer.serverSide.ProjectManager
+import jetbrains.buildServer.web.openapi.PluginDescriptor
 import jetbrains.buildServer.web.openapi.WebControllerManager
 import org.springframework.web.servlet.ModelAndView
+import java.io.File
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-internal class DeleteTriggerController(myWebControllerManager: WebControllerManager): BaseController() {
+internal class DeleteTriggerController(
+    myWebControllerManager: WebControllerManager,
+    private val myProjectManager: ProjectManager,
+    private val myPluginDescriptor: PluginDescriptor
+) : BaseController() {
     private val myLogger = Logger.getInstance(DeleteTriggerController::class.qualifiedName)
 
     init {
@@ -20,20 +25,17 @@ internal class DeleteTriggerController(myWebControllerManager: WebControllerMana
         const val REQUEST_PATH = "/admin/deleteCustomTriggerPolicy.html"
     }
 
+    // TODO: add logging
     override fun doHandle(request: HttpServletRequest, response: HttpServletResponse): ModelAndView? {
-        println("DELETE WITH PARAMETERS:")
-        request.parameterMap.forEach { println(it.key + " " + it.value.joinToString { it }) }
-        println()
-        return null
-    }
+        val project = CustomTriggersController.run {
+            request.findProject(myProjectManager, myLogger)
+        } ?: return null
 
-    private fun Collection<BuildTypeSettings>.removeTriggersOfPolicyPath(triggerPolicyPath: String) {
-        forEach { settings ->
-            settings.buildTriggersCollection.filter {
-                it.properties[Constants.TRIGGER_POLICY_PATH] == triggerPolicyPath
-            }.forEach {
-                settings.removeBuildTrigger(it)
-            }
-        }
+        val triggerJarName = request.getParameter("fileName") ?: return null
+        val pluginDataDirectory = project.getPluginDataDirectory(myPluginDescriptor.pluginName)
+        val triggerFile = File(pluginDataDirectory, triggerJarName)
+        triggerFile.delete()
+
+        return null
     }
 }

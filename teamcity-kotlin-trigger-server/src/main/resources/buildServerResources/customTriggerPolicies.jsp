@@ -81,7 +81,7 @@
                                   <ul class="menuList">
                                       <l:li>
                                         <a href="#"
-                                           onclick="return BS.TriggerPolicy.update('${localTrigger.fileName}')"
+                                           onclick="return BS.TriggerPolicy.update(String.raw`${localTrigger.fileName}`)"
                                            title="Update trigger policy">Update...</a>
                                       </l:li>
                                       <c:if test="${canEditSubprojects}">
@@ -101,12 +101,13 @@
                                                   </l:li>
                                               </c:otherwise>
                                           </c:choose>
-
-                                          <l:li>
-                                              <a href="#"
-                                                 onclick="return BS.TriggerPolicy.delete('${localTrigger.filePath}')"
-                                                 title="Delete this policy and all its triggers">Delete...</a>
-                                          </l:li>
+                                          <c:if test="${empty usageProjects}">
+                                              <l:li>
+                                                  <a href="#"
+                                                     onclick="return BS.TriggerPolicy.delete(String.raw`${localTrigger.fileName}`)"
+                                                     title="Delete this policy and all its triggers">Delete...</a>
+                                              </l:li>
+                                          </c:if>
                                       </c:if>
                                   </ul>
                               </div>
@@ -224,11 +225,13 @@
         },
 
         setEnabled: function (triggerPolicyPath, enable) {
+            let action = enable ? 'Enable' : 'Disable'
+            let changedItems = enable ? 'previously disabled' : 'enabled'
             BS.confirmDialog.show({
-                text: "Disable this triggering policy and all its triggers?",
-                actionButtonText: 'Disable',
+                text: action + " this triggering policy and all its " + changedItems + " triggers?",
+                actionButtonText: action,
                 cancelButtonText: 'Cancel',
-                title: 'Disable triggering policy',
+                title: action + ' triggering policy',
                 action: function () {
                     var completed = $j.Deferred();
                     BS.ajaxRequest(window["base_uri"] + '${DisableTriggerController.REQUEST_PATH}', {
@@ -247,9 +250,9 @@
             });
         },
 
-        delete: function (triggerPolicyPath) {
+        delete: function (fileName) {
             BS.confirmDialog.show({
-                text: 'Delete this triggering policy and all its triggers?',
+                text: 'Delete "' + fileName + '" triggering policy?',
                 actionButtonText: 'Delete',
                 cancelButtonText: 'Cancel',
                 title: 'Delete triggering policy',
@@ -257,7 +260,7 @@
                     var completed = $j.Deferred();
                     BS.ajaxRequest(window["base_uri"] + '${DeleteTriggerController.REQUEST_PATH}', {
                         parameters: {
-                            triggerPolicyPath,
+                            fileName,
                             projectId: '${project.projectId}'
                         },
                         onComplete: function (transport) {
