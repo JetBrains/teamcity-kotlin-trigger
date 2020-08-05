@@ -1,6 +1,7 @@
 package jetbrains.buildServer.buildTriggers.remote.controller
 
 import com.intellij.openapi.diagnostic.Logger
+import jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager
 import jetbrains.buildServer.controllers.MultipartFormController
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.SProject
@@ -13,20 +14,19 @@ import java.io.File
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
+internal const val UPLOAD_TRIGGER_REQUEST_PATH = "/admin/uploadCustomTriggerPolicy.html"
+
 internal class UploadTriggerController(
     private val myProjectManager: ProjectManager,
     private val myPluginDescriptor: PluginDescriptor,
     private val myCustomTriggersManager: CustomTriggersManager,
     myWebControllerManager: WebControllerManager
 ) : MultipartFormController() {
+
     private val myLogger = Logger.getInstance(UploadTriggerController::class.qualifiedName)
 
     init {
-        myWebControllerManager.registerController(REQUEST_PATH, this)
-    }
-
-    companion object {
-        const val REQUEST_PATH = "/admin/uploadCustomTriggerPolicy.html"
+        myWebControllerManager.registerController(UPLOAD_TRIGGER_REQUEST_PATH, this)
     }
 
     override fun doPost(request: HttpServletRequest, response: HttpServletResponse): ModelAndView {
@@ -34,26 +34,34 @@ internal class UploadTriggerController(
         val model = modelAndView.model
         model["jsBase"] = "BS.UploadTriggerDialog"
 
-        val triggerJarName = request.getParameter("fileName")
         val updatedFileName = request.getParameter("updatedFileName")
+        val triggerJarName = request.getParameter("fileName")
+            ?: run {
+                myLogger.error("Cannot upload trigger policy: the request did not specify any filename")
+                return modelAndView
+            }
+        val project = myProjectManager.findProjectByRequest(request, myLogger)
+            ?: run {
+                myLogger.error("Cannot upload trigger policy: the request did not specify any project id")
+                return modelAndView
+            }
 
         try {
-            val project = CustomTriggersController.run {
-                request.findProject(myProjectManager, myLogger)
-            } ?: throw UploadException("Failed to determine the project of the request")
-
-            if (updatedFileName.isNullOrBlank()) {
+            val updateMode = updatedFileName != null && updatedFileName.isNotBlank()
+            if (updateMode) {
+                if (updatedFileName != triggerJarName)
+                    throw UploadException("Uploaded jar's filename doesn't match the updated file's name")
+            } else {
                 if (project.hasLocalFile(triggerJarName))
                     throw UploadException("File already exists")
-            } else if (updatedFileName != triggerJarName)
-                throw UploadException("Uploaded jar's filename doesn't match the updated file's name")
+            }
 
             val ancestor = project.projectPath.dropLast(1)
                 .firstOrNull { it.hasLocalFile(triggerJarName) }
             if (ancestor != null)
                 throw UploadException("File is already loaded to this project's ancestor '${ancestor.fullName}'")
 
-            val descendant = project.ownProjects.firstOrNull { it.hasLocalFile(triggerJarName) }
+            val descendant = project.projects.firstOrNull { it.hasLocalFile(triggerJarName) }
             if (descendant != null)
                 throw UploadException("File is already loaded to this project's descendant '${descendant.fullName}'")
 
@@ -62,8 +70,11 @@ internal class UploadTriggerController(
 
             validateMultipart(request, triggerJarName).transferTo(triggerFile)
             myCustomTriggersManager.setTriggerPolicyUpdated(triggerFile.absolutePath, true)
+
+            if (!updateMode)
+                myCustomTriggersManager.setTriggerPolicyEnabled(triggerFile.absolutePath, true)
         } catch (e: Exception) {
-            myLogger.warnAndDebugDetails("Error while uploading a trigger policy", e)
+            myLogger.warnAndDebugDetails("Failed to upload a trigger policy", e)
             model["error"] = e.message
             return modelAndView
         }
@@ -80,16 +91,18 @@ internal class UploadTriggerController(
     ): MultipartFile {
         val triggerJar = getMultipartFileOrFail(request, "file:fileToUpload")
 
-        if (triggerJar == null || triggerJar.isEmpty)
-            throw UploadException("The file is not selected")
+        return when {
+            triggerJar == null || triggerJar.isEmpty ->
+                throw UploadException("The file is not selected")
 
-        if (StringUtil.isEmpty(triggerJarName))
-            throw UploadException("The file name is not specified")
+            StringUtil.isEmpty(triggerJarName) ->
+                throw UploadException("The file name is not specified")
 
-        if (!triggerJarName.endsWith(".jar"))
-            throw UploadException("Selected file must be a JAR archive")
+            !triggerJarName.endsWith(".jar") ->
+                throw UploadException("Selected file must be a JAR archive")
 
-        return triggerJar
+            else -> triggerJar
+        }
     }
 
     private class UploadException(msg: String) : RuntimeException(msg)

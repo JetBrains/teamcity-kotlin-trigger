@@ -17,40 +17,37 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.network.sockets.ConnectTimeoutException
 import jetbrains.buildServer.buildTriggers.remote.*
-import jetbrains.buildServer.buildTriggers.remote.jackson.TypeValidator
+import jetbrains.buildServer.buildTriggers.remote.jackson.TYPE_VALIDATOR
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-private const val connectTimeout = 5L
-private const val requestTimeout = 10L
-private val timeUnit = TimeUnit.SECONDS
+private const val CONNECT_TIMEOUT = 5L
+private const val REQUEST_TIMEOUT = 10L
+private val TIME_UNIT = TimeUnit.SECONDS
 
 internal class KtorClient(private val myHost: String, private val myPort: Int) {
     private val myLogger = Logger.getInstance(KtorClient::class.qualifiedName)
     private val myClient = initClient()
-    var outdated = false
+    var closed = false
         private set
 
-    fun sendTriggerBuild(triggerPolicyName: String, context: TriggerContext): TriggerBuildResponse? =
+    fun sendTriggerBuild(triggerPolicyName: String, context: TriggerContext): TriggerBuildResponse =
         makeRequest(
             RequestMapping.triggerBuild(triggerPolicyName),
-            context,
-            onConnectionError = null
+            context
         ) { response: Response ->
             when (response) {
                 is TriggerBuildResponse -> return response
                 is ErroneousResponse -> throw response.error
-                else -> myLogger.error("Server response type is invalid: $response")
+                else -> throw RuntimeException("Server response type is invalid: ${response::class.qualifiedName}")
             }
-            null
         }
 
     fun uploadTriggerPolicy(triggerPolicyName: String, body: TriggerPolicyBody): Unit =
         makeRequest(
             RequestMapping.uploadTriggerPolicy(triggerPolicyName),
-            body,
-            onConnectionError = Unit
+            body
         ) { response: Response ->
             when (response) {
                 is OkayResponse -> return
@@ -60,16 +57,15 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
         }
 
     fun closeConnection() {
-        if (outdated) return
+        if (closed) return
 
         myClient.close()
-        outdated = true
+        closed = true
     }
 
     private inline fun <T, Req : RequestBody, reified Resp : Response> makeRequest(
         mapping: Mapping,
         body: Req,
-        onConnectionError: T,
         onSuccess: (Resp) -> T
     ): T = try {
         val response = runBlocking {
@@ -86,16 +82,15 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
             is HttpRequestTimeoutException ->
                 myLogger.error("Request timed out to $myHost:$myPort")
             is ServerResponseException -> // status code 5**
-                myLogger.error("Server $myHost:$myPort failed to respond", e)
+                myLogger.error("Server $myHost:$myPort failed to respond")
             is ClientEngineClosedException ->
                 myLogger.error("Tried to use already closed connection to $myHost:$myPort")
             is IOException -> {
-                myLogger.error("Connection closed to $myHost:$myPort", e)
+                myLogger.error("Connection closed to $myHost:$myPort")
                 closeConnection()
             }
-            else -> throw e
         }
-        onConnectionError
+        throw e
     }
 
     private fun initClient() = HttpClient {
@@ -107,12 +102,12 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
         }
         install(JsonFeature) {
             serializer = JacksonSerializer {
-                activateDefaultTyping(TypeValidator.myTypeValidator)
+                activateDefaultTyping(TYPE_VALIDATOR)
             }
         }
         install(HttpTimeout) {
-            connectTimeoutMillis = timeUnit.toMillis(connectTimeout)
-            requestTimeoutMillis = timeUnit.toMillis(requestTimeout)
+            connectTimeoutMillis = TIME_UNIT.toMillis(CONNECT_TIMEOUT)
+            requestTimeoutMillis = TIME_UNIT.toMillis(REQUEST_TIMEOUT)
         }
     }
 }

@@ -1,0 +1,60 @@
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DeleteTriggerControllerKt" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DisableTriggerControllerKt" %>
+
+<script>
+    BS.TriggerPolicy = {
+        update: function (updatedFileName) {
+            return BS.UploadTriggerDialog.open(updatedFileName);
+        },
+
+        setEnabled: function (triggerPolicyName, enable, hasUsages) {
+            let action = enable ? 'Enable' : 'Disable'
+            let changed = enable ? 'previously disabled' : 'enabled'
+            let andTriggers = hasUsages ? ' and all its ' + changed + ' triggers ' : ''
+            BS.confirmDialog.show({
+                text: action + " this triggering policy" + andTriggers + "?",
+                actionButtonText: action,
+                cancelButtonText: 'Cancel',
+                title: action + ' triggering policy',
+                action: function () {
+                    let completed = $j.Deferred();
+                    BS.ajaxRequest(window["base_uri"] + '${DisableTriggerControllerKt.DISABLE_TRIGGER_REQUEST_PATH}', {
+                        parameters: {
+                            triggerPolicyName,
+                            enable,
+                            projectId: '${project.projectId}'
+                        },
+                        onComplete: function () {
+                            completed.resolve();
+                            BS.reload(true);
+                        }
+                    });
+                    return completed;
+                }
+            });
+        },
+
+        delete: function (fileName, policyName) {
+            BS.confirmDialog.show({
+                text: 'Delete "' + policyName + '" triggering policy?',
+                actionButtonText: 'Delete',
+                cancelButtonText: 'Cancel',
+                title: 'Delete triggering policy',
+                action: function () {
+                    let completed = $j.Deferred();
+                    BS.ajaxRequest(window["base_uri"] + '${DeleteTriggerControllerKt.DELETE_TRIGGER_REQUEST_PATH}', {
+                        parameters: {
+                            fileName,
+                            projectId: '${project.projectId}'
+                        },
+                        onComplete: function () {
+                            completed.resolve();
+                            BS.reload(true);
+                        }
+                    });
+                    return completed;
+                }
+            });
+        }
+    }
+</script>

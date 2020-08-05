@@ -16,18 +16,18 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
     JsonSubTypes.Type(InternalTriggerPolicyError::class),
     JsonSubTypes.Type(InternalServerError::class)
 )
-sealed class ServerError(msg: String) : RuntimeException(msg) {
+sealed class ServerError(override val message: String) : RuntimeException(message) {
     fun asResponse() = ErroneousResponse(this)
-    override fun toString() = message!!
+    override fun toString() = message
 }
 
-class NoTriggerPolicyNameError internal constructor(msg: String) : ServerError(msg)
-class ContentTypeMismatchError internal constructor(msg: String) : ServerError(msg)
-class TriggerPolicyDoesNotExistError internal constructor(msg: String) : ServerError(msg)
-class TriggerPolicyLoadingError internal constructor(msg: String) : ServerError(msg)
-class TriggerInvocationTimeoutError internal constructor(msg: String) : ServerError(msg)
-class InternalTriggerPolicyError internal constructor(msg: String) : ServerError(msg)
-class InternalServerError internal constructor(msg: String) : ServerError(msg)
+class NoTriggerPolicyNameError internal constructor(message: String) : ServerError(message)
+class ContentTypeMismatchError internal constructor(message: String) : ServerError(message)
+class TriggerPolicyDoesNotExistError internal constructor(message: String) : ServerError(message)
+class TriggerPolicyLoadingError internal constructor(message: String) : ServerError(message)
+class TriggerInvocationTimeoutError internal constructor(message: String) : ServerError(message)
+class InternalTriggerPolicyError internal constructor(message: String) : ServerError(message)
+class InternalServerError internal constructor(message: String) : ServerError(message)
 
 /* These functions are needed to keep errors' constructors receive error message as the only parameter;
     otherwise, deserialization may break due to how Jackson decides what objects to pass to the constructor */

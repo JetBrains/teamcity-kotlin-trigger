@@ -7,11 +7,12 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.logging.Logger
 
-private const val timeout = 5L
-private val timeoutUnit = TimeUnit.SECONDS
+private const val TIMEOUT = 5L
+private val TIMEOUT_UNIT = TimeUnit.SECONDS
 
 internal class TriggerActions(
-    private val myTriggerPolicyManager: TriggerPolicyManager, private val myLogger: Logger
+    private val myTriggerPolicyManager: TriggerPolicyManager,
+    private val myLogger: Logger
 ) {
     private val myExecutor = Executors.newSingleThreadExecutor()
 
@@ -20,7 +21,7 @@ internal class TriggerActions(
         val answer = try {
             myExecutor.submit<Boolean> {
                 triggerPolicy.triggerBuild(context)
-            }.get(timeout, timeoutUnit)
+            }.get(TIMEOUT, TIMEOUT_UNIT)
         } catch (e: TimeoutException) {
             throw triggerInvocationTimeoutError(triggerPolicyName)
         } catch (e: ExecutionException) {

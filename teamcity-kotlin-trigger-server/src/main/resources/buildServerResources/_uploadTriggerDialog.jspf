@@ -1,0 +1,60 @@
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.UploadTriggerControllerKt" %>
+
+<bs:dialog dialogId="uploadTriggerDialog" title="Upload trigger policy jar"
+           closeCommand="BS.UploadTriggerDialog.close()"
+           dialogClass="uploadDialog">
+    <forms:multipartForm id="uploadTriggerForm" targetIframe="hidden-iframe"
+                         onsubmit="return BS.UploadTriggerDialog.validate();">
+        <input type="text" id="fileName" name="fileName" value="" class="mediumField" style="display:none;"/>
+        <input type="text" id="projectId" name="projectId" value="${project.projectId}"
+               style="display: none"/>
+        <input type="text" id="updatedFileName" name="updatedFileName" value="" style="display: none"/>
+        <table class="runnerFormTable">
+            <tr>
+                <th>Trigger Policy</th>
+                <td>
+                    <forms:file name="fileToUpload"/>
+                    <div id="uploadError" class="error hidden"></div>
+                </td>
+            </tr>
+        </table>
+        <div class="popupSaveButtonsBlock">
+            <forms:submit id="uploadTriggerDialogSubmit" label="Upload trigger policy jar"/>
+            <forms:cancel onclick="BS.UploadTriggerDialog.close()"/>
+            <forms:saving id="uploadingProgress" savingTitle="Uploading..."/>
+        </div>
+    </forms:multipartForm>
+</bs:dialog>
+
+<script type="application/javascript">
+    $j('#uploadTriggerForm').attr('action', window["base_uri"] + '${UploadTriggerControllerKt.UPLOAD_TRIGGER_REQUEST_PATH}');
+
+    BS.UploadTriggerDialog = OO.extend(BS.AbstractWebForm, OO.extend(BS.AbstractModalDialog, OO.extend(BS.FileBrowse, {
+        onFileChanged: function (filename) {
+        },
+
+        getContainer: function () {
+            return $('uploadTriggerDialog');
+        },
+
+        formElement: function () {
+            return $('uploadTriggerForm');
+        },
+
+        refresh: function () {
+            BS.reload(true);
+        },
+
+        savingIndicator: function () {
+            return $j('#uploadingProgress');
+        },
+
+        open: function (updatedFile) {
+            $j('#updatedFileName').val(updatedFile)
+            this.show();
+            return false;
+        }
+    })))
+
+    BS.UploadTriggerDialog.prepareFileUpload();
+</script>

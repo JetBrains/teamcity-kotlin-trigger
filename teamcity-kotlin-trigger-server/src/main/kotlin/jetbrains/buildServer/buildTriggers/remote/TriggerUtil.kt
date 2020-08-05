@@ -3,14 +3,13 @@ package jetbrains.buildServer.buildTriggers.remote
 import jetbrains.buildServer.buildTriggers.PolledTriggerContext
 import jetbrains.buildServer.serverSide.CustomDataStorage
 import jetbrains.buildServer.util.TimeService
-import java.io.File
 
 internal object TriggerUtil {
 
     fun createTriggerBuildContext(context: PolledTriggerContext, timeService: TimeService) = TriggerContext(
         timeService.now(),
         parseTriggerProperties(context.triggerDescriptor.properties) ?: emptyMap(),
-        getCustomDataStorage(context).values?.toMutableMap() ?: mutableMapOf()
+        getCustomDataStorageOfTrigger(context).values?.toMutableMap() ?: mutableMapOf()
     )
 
     fun parseTriggerProperties(properties: Map<String, String>): Map<String, String>? {
@@ -25,7 +24,7 @@ internal object TriggerUtil {
             }.toMap()
     }
 
-    fun getCustomDataStorage(context: PolledTriggerContext): CustomDataStorage {
+    fun getCustomDataStorageOfTrigger(context: PolledTriggerContext): CustomDataStorage {
         val triggerServiceId = context.triggerDescriptor.buildTriggerService::class.qualifiedName
         val triggerId = context.triggerDescriptor.id
 
@@ -34,6 +33,4 @@ internal object TriggerUtil {
 
     fun getTargetTriggerPolicyPath(properties: Map<String, String>): String? =
         properties[Constants.TRIGGER_POLICY_PATH]
-
-    fun getTriggerPolicyName(path: String): String = File(path).nameWithoutExtension
 }

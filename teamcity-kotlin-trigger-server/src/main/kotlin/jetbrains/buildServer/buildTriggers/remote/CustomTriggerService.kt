@@ -4,7 +4,7 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.buildTriggers.BuildTriggerDescriptor
 import jetbrains.buildServer.buildTriggers.BuildTriggerService
 import jetbrains.buildServer.buildTriggers.async.AsyncPolledBuildTriggerFactory
-import jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggersManager
+import jetbrains.buildServer.buildTriggers.remote.controller.CUSTOM_TRIGGER_PROPERTIES_CONTROLLER
 import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.PropertiesProcessor
 import jetbrains.buildServer.util.TimeService
@@ -32,33 +32,31 @@ class CustomTriggerService(
 
         val disabledStatus =
             if (myCustomTriggersBean.isTriggerPolicyEnabled(triggerPolicyPath)) ""
-            else " (disabled)"
+            else "(disabled)"
 
-        return "Uses ${TriggerUtil.getTriggerPolicyName(triggerPolicyPath)}" + disabledStatus
+        val triggerPolicyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
+
+        return "Uses $triggerPolicyName $disabledStatus"
     }
 
-    override fun getTriggerPropertiesProcessor() =
-        PropertiesProcessor { properties: Map<String, String> ->
-            val triggerPolicy = TriggerUtil.getTargetTriggerPolicyPath(properties)
-            val triggerProperties = TriggerUtil.parseTriggerProperties(properties)
+    override fun getTriggerPropertiesProcessor() = PropertiesProcessor { properties: Map<String, String> ->
+        val triggerPolicy = TriggerUtil.getTargetTriggerPolicyPath(properties)
+        val triggerProperties = TriggerUtil.parseTriggerProperties(properties)
 
-            val rv = mutableListOf<InvalidProperty>()
+        val rv = mutableListOf<InvalidProperty>()
 
-            if (triggerPolicy.isNullOrBlank())
-                rv.add(InvalidProperty(Constants.TRIGGER_POLICY_PATH, "A trigger policy should be specified"))
-            if (triggerProperties == null)
-                rv.add(
-                    InvalidProperty(
-                        Constants.PROPERTIES,
-                        "Properties should be 'key=value' pairs on separate lines"
-                    )
-                )
+        if (triggerPolicy.isNullOrBlank())
+            rv.add(InvalidProperty(Constants.TRIGGER_POLICY_PATH, "A trigger policy should be specified"))
 
-            rv
-        }
+        if (triggerProperties == null)
+            rv.add(InvalidProperty(Constants.PROPERTIES, "Properties should be 'key=value' pairs on separate lines"))
 
-    override fun getEditParametersUrl() = myPluginDescriptor.getPluginResourcesPath("customTriggerController.html")
+        rv
+    }
 
-    override fun isMultipleTriggersPerBuildTypeAllowed() = true
+    override fun getEditParametersUrl() =
+        myPluginDescriptor.getPluginResourcesPath(CUSTOM_TRIGGER_PROPERTIES_CONTROLLER)
+
     override fun getBuildTriggeringPolicy() = myPolicy
+    override fun isMultipleTriggersPerBuildTypeAllowed() = true
 }
