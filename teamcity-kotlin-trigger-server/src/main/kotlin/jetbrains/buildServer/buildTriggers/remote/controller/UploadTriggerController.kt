@@ -8,14 +8,14 @@ import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 import jetbrains.buildServer.web.openapi.WebControllerManager
+import org.springframework.stereotype.Controller
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.servlet.ModelAndView
 import java.io.File
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-internal const val UPLOAD_TRIGGER_REQUEST_PATH = "/admin/uploadCustomTriggerPolicy.html"
-
+@Controller
 internal class UploadTriggerController(
     private val myProjectManager: ProjectManager,
     private val myPluginDescriptor: PluginDescriptor,
@@ -26,7 +26,7 @@ internal class UploadTriggerController(
     private val myLogger = Logger.getInstance(UploadTriggerController::class.qualifiedName)
 
     init {
-        myWebControllerManager.registerController(UPLOAD_TRIGGER_REQUEST_PATH, this)
+        myWebControllerManager.registerController(PATH, this)
     }
 
     override fun doPost(request: HttpServletRequest, response: HttpServletResponse): ModelAndView {
@@ -65,14 +65,14 @@ internal class UploadTriggerController(
             if (descendant != null)
                 throw UploadException("File is already loaded to this project's descendant '${descendant.fullName}'")
 
-            val pluginDataDirectory = project.getPluginDataDirectory(myPluginDescriptor.pluginName)
-            val triggerFile = File(pluginDataDirectory, triggerJarName)
+            val policyPath = myPluginDescriptor.getPluginResourcesPath(triggerJarName)
+            val triggerFile = File(policyPath)
 
             validateMultipart(request, triggerJarName).transferTo(triggerFile)
-            myCustomTriggersManager.setTriggerPolicyUpdated(triggerFile.absolutePath, true)
+            myCustomTriggersManager.setTriggerPolicyUpdated(policyPath, true)
 
             if (!updateMode)
-                myCustomTriggersManager.setTriggerPolicyEnabled(triggerFile.absolutePath, true)
+                myCustomTriggersManager.setTriggerPolicyEnabled(policyPath, true)
         } catch (e: Exception) {
             myLogger.warnAndDebugDetails("Failed to upload a trigger policy", e)
             model["error"] = e.message
@@ -106,4 +106,8 @@ internal class UploadTriggerController(
     }
 
     private class UploadException(msg: String) : RuntimeException(msg)
+
+    companion object {
+        const val PATH = "/admin/uploadCustomTriggerPolicy.html"
+    }
 }

@@ -5,12 +5,12 @@ import jetbrains.buildServer.controllers.BaseController
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.web.openapi.WebControllerManager
+import org.springframework.stereotype.Controller
 import org.springframework.web.servlet.ModelAndView
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-internal const val DISABLE_TRIGGER_REQUEST_PATH = "/admin/disableCustomTriggerPolicy.html"
-
+@Controller
 internal class DisableTriggerController(
     myWebControllerManager: WebControllerManager,
     private val myProjectManager: ProjectManager
@@ -19,7 +19,7 @@ internal class DisableTriggerController(
     private val myLogger = Logger.getInstance(DisableTriggerController::class.qualifiedName)
 
     init {
-        myWebControllerManager.registerController(DISABLE_TRIGGER_REQUEST_PATH, this)
+        myWebControllerManager.registerController(PATH, this)
     }
 
     override fun doHandle(request: HttpServletRequest, response: HttpServletResponse): ModelAndView? {
@@ -47,18 +47,36 @@ internal class DisableTriggerController(
         return null
     }
 
+    // TODO: move
+    // TODO: clean up
     companion object {
-        fun isTriggerPolicyEnabled(triggerPolicyName: String, project: SProject): Boolean =
-            project
-                .getCustomDataStorage(DisableTriggerController::class.qualifiedName!!)
-                .getValue(commonId(triggerPolicyName, project))
-                ?.toBoolean()
-                ?: true
+        const val PATH = "/admin/disableCustomTriggerPolicy.html"
+
+        private const val ID_PARAM = "id"
+        private const val ENABLED_PARAM = "enabled"
+
+        fun isTriggerPolicyEnabled(triggerPolicyName: String, project: SProject): Boolean {
+            val enableFeature = project.getOwnFeaturesOfType(DisableTriggerController::class.qualifiedName!!)
+                .firstOrNull { it.parameters[ID_PARAM] == commonId(triggerPolicyName, project) }
+
+            return if (enableFeature == null) true
+            else enableFeature.parameters[ENABLED_PARAM]?.toBoolean() ?: false
+        }
 
         fun setTriggerPolicyEnabled(triggerPolicyName: String, project: SProject, enabled: Boolean) {
-            project
-                .getCustomDataStorage(DisableTriggerController::class.qualifiedName!!)
-                .putValue(commonId(triggerPolicyName, project), enabled.toString())
+            val enableFeature = project.getOwnFeaturesOfType(DisableTriggerController::class.qualifiedName!!)
+                .firstOrNull { it.parameters[ID_PARAM] == commonId(triggerPolicyName, project) }
+            if (enableFeature == null) {
+                val params = mapOf(
+                    ID_PARAM to commonId(triggerPolicyName, project),
+                    ENABLED_PARAM to enabled.toString()
+                )
+                project.addFeature(DisableTriggerController::class.qualifiedName!!, params)
+            } else {
+                val params = enableFeature.parameters.toMutableMap()
+                params[ENABLED_PARAM] = enabled.toString()
+                project.updateFeature(enableFeature.id, enableFeature.type, params)
+            }
         }
 
         private fun commonId(triggerPolicyName: String, project: SProject) =

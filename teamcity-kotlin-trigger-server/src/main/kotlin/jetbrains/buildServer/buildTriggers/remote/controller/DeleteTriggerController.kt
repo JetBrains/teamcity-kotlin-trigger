@@ -6,13 +6,13 @@ import jetbrains.buildServer.controllers.BaseController
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 import jetbrains.buildServer.web.openapi.WebControllerManager
+import org.springframework.stereotype.Controller
 import org.springframework.web.servlet.ModelAndView
 import java.io.File
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-internal const val DELETE_TRIGGER_REQUEST_PATH = "/admin/deleteCustomTriggerPolicy.html"
-
+@Controller
 internal class DeleteTriggerController(
     myWebControllerManager: WebControllerManager,
     private val myProjectManager: ProjectManager,
@@ -23,7 +23,7 @@ internal class DeleteTriggerController(
     private val myLogger = Logger.getInstance(DeleteTriggerController::class.qualifiedName)
 
     init {
-        myWebControllerManager.registerController(DELETE_TRIGGER_REQUEST_PATH, this)
+        myWebControllerManager.registerController(PATH, this)
     }
 
     override fun doHandle(request: HttpServletRequest, response: HttpServletResponse): ModelAndView? {
@@ -38,17 +38,21 @@ internal class DeleteTriggerController(
                 return null
             }
 
-        val pluginDataDirectory = project.getPluginDataDirectory(myPluginDescriptor.pluginName)
-        val triggerFile = File(pluginDataDirectory, triggerFileName)
+        val policyPath = myPluginDescriptor.getPluginResourcesPath(triggerFileName)
+        val triggerFile = File(policyPath)
 
-        val policyUsages = myCustomTriggersManager.getUsagesInProjectAndSubprojects(triggerFile.absolutePath, project)
+        val policyUsages = myCustomTriggersManager.getUsages(policyPath, project)
 
         if (policyUsages.isNotEmpty()) {
-            myLogger.warn("Failed to delete policy: it has usages (policy path is ${triggerFile.absolutePath})")
+            myLogger.warn("Failed to delete policy: it has usages (policy path is $policyPath)")
             return null
         }
 
         triggerFile.delete()
         return null
+    }
+
+    companion object {
+        const val PATH = "/admin/deleteCustomTriggerPolicy.html"
     }
 }

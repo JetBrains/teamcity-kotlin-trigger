@@ -30,6 +30,10 @@ class RemoteTriggerPolicy(
     }
 
     override fun triggerBuild(prev: String?, context: PolledTriggerContext): String? {
+        context.triggerDescriptor.properties.forEach { k, v ->
+            println("$k: '$v'")
+        }
+
         val triggerPolicyPath = TriggerUtil.getTargetTriggerPolicyPath(context.triggerDescriptor.properties)
             ?: run {
                 myLogger.debug("Trigger policy not specified, triggerBuild() invocation skipped")
@@ -99,6 +103,11 @@ class RemoteTriggerPolicy(
 
         val triggerPolicyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
         val triggerPolicyBytes = File(triggerPolicyPath).readBytes()
+
+        if (triggerPolicyBytes.isEmpty()) {
+            myLogger.error("Failed to upload trigger policy '$triggerPolicyName': it's file is absent")
+            return
+        }
 
         try {
             client.uploadTriggerPolicy(triggerPolicyName, TriggerPolicyBody(triggerPolicyBytes))

@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="
+               http://www.springframework.org/schema/beans
+               http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+               http://www.springframework.org/schema/context
+               http://www.springframework.org/schema/context/spring-context-3.0.xsd"
        default-autowire="constructor">
-    <bean class="jetbrains.buildServer.buildTriggers.remote.CustomTriggerService"/>
-    <bean class="jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggerPropertiesController"/>
-    <bean class="jetbrains.buildServer.buildTriggers.remote.projectExtension.CustomTriggerPoliciesTab"/>
-    <bean class="jetbrains.buildServer.buildTriggers.remote.controller.UploadTriggerController"/>
-    <bean class="jetbrains.buildServer.buildTriggers.remote.controller.DisableTriggerController"/>
-    <bean class="jetbrains.buildServer.buildTriggers.remote.controller.DeleteTriggerController"/>
-    <bean class="jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager"/>
-    <bean class="jetbrains.buildServer.buildTriggers.remote.PermissionChecker"/>
+    <context:component-scan base-package="jetbrains.buildServer.buildTriggers.remote"/>
 </beans>

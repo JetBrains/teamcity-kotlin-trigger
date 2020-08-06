@@ -1,4 +1,4 @@
-<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.UploadTriggerControllerKt" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.UploadTriggerController" %>
 
 <bs:dialog dialogId="uploadTriggerDialog" title="Upload trigger policy jar"
            closeCommand="BS.UploadTriggerDialog.close()"
@@ -27,7 +27,7 @@
 </bs:dialog>
 
 <script type="application/javascript">
-    $j('#uploadTriggerForm').attr('action', window["base_uri"] + '${UploadTriggerControllerKt.UPLOAD_TRIGGER_REQUEST_PATH}');
+    $j('#uploadTriggerForm').attr('action', window["base_uri"] + '${UploadTriggerController.PATH}');
 
     BS.UploadTriggerDialog = OO.extend(BS.AbstractWebForm, OO.extend(BS.AbstractModalDialog, OO.extend(BS.FileBrowse, {
         onFileChanged: function (filename) {

@@ -7,8 +7,10 @@ import jetbrains.buildServer.serverSide.BuildTypeSettings
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.web.openapi.PluginDescriptor
+import org.springframework.stereotype.Component
 import java.io.File
 
+@Component
 class CustomTriggersManager(
     myPluginDescriptor: PluginDescriptor,
     private val myProjectManager: ProjectManager
@@ -67,11 +69,26 @@ class CustomTriggersManager(
         .listFiles()
         ?.asList().orEmpty()
 
+    // TODO: clean up
     private fun createCustomTriggerPolicyDescriptor(file: File, project: SProject): CustomTriggerPolicyDescriptor {
-        val policyDescriptorRegistry = myProjectManager.rootProject
-            .getCustomDataStorage(CustomTriggerPolicyDescriptor::class.qualifiedName!!)
+        val policyDescriptorRegistryFeature = myProjectManager.rootProject
+            .getAvailableFeaturesOfType(CustomTriggerPolicyDescriptor::class.qualifiedName!!)
+            .firstOrNull { it.parameters["id"] == file.absolutePath }
 
-        policyDescriptorRegistry.putValue(file.absolutePath, project.externalId)
+        if (policyDescriptorRegistryFeature == null) {
+            val params = mapOf(
+                "id" to file.absolutePath,
+                "projectExternalId" to project.externalId
+            )
+            myProjectManager.rootProject
+                .addFeature(CustomTriggerPolicyDescriptor::class.qualifiedName!!, params)
+        } else {
+            val params = policyDescriptorRegistryFeature.parameters.toMutableMap()
+            params["projectExternalId"] = project.externalId
+            myProjectManager.rootProject
+                .updateFeature(policyDescriptorRegistryFeature.id, policyDescriptorRegistryFeature.type, params)
+        }
+
         return CustomTriggerPolicyDescriptor(file, project)
     }
 
@@ -81,7 +98,7 @@ class CustomTriggersManager(
     fun allUsableCustomTriggerFiles(project: SProject) = project.projectPath
         .flatMap(this::localCustomTriggers)
 
-    fun getUsagesInProjectAndSubprojects(triggerPolicyPath: String, project: SProject): List<BuildTypeIdentity> {
+    fun getUsages(triggerPolicyPath: String, project: SProject): List<BuildTypeIdentity> {
         val usages = mutableListOf<BuildTypeIdentity>()
 
         project.buildTypeTemplates

@@ -1,5 +1,5 @@
-<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DeleteTriggerControllerKt" %>
-<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DisableTriggerControllerKt" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DeleteTriggerController" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DisableTriggerController" %>
 
 <script>
     BS.TriggerPolicy = {
@@ -18,7 +18,7 @@
                 title: action + ' triggering policy',
                 action: function () {
                     let completed = $j.Deferred();
-                    BS.ajaxRequest(window["base_uri"] + '${DisableTriggerControllerKt.DISABLE_TRIGGER_REQUEST_PATH}', {
+                    BS.ajaxRequest(window["base_uri"] + '${DisableTriggerController.PATH}', {
                         parameters: {
                             triggerPolicyName,
                             enable,
@@ -42,7 +42,7 @@
                 title: 'Delete triggering policy',
                 action: function () {
                     let completed = $j.Deferred();
-                    BS.ajaxRequest(window["base_uri"] + '${DeleteTriggerControllerKt.DELETE_TRIGGER_REQUEST_PATH}', {
+                    BS.ajaxRequest(window["base_uri"] + '${DeleteTriggerController.PATH}', {
                         parameters: {
                             fileName,
                             projectId: '${project.projectId}'

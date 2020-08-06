@@ -6,10 +6,9 @@
 <jsp:useBean id="customTriggersManager" type="jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager"
              scope="request"/>
 <jsp:useBean id="permissionChecker" type="jetbrains.buildServer.buildTriggers.remote.PermissionChecker" scope="request"/>
-<jsp:useBean id="pluginDescriptor" type="jetbrains.buildServer.web.openapi.PluginDescriptor" scope="request"/>
 <jsp:useBean id="project" type="jetbrains.buildServer.serverSide.SProject" scope="request"/>
 
-<bs:linkCSS>${pluginDescriptor.getPluginResourcesPath("_customTriggerPoliciesTab.css")}</bs:linkCSS>
+<bs:linkCSS>${teamcityPluginResourcesPath}_customTriggerPoliciesTab.css</bs:linkCSS>
 
 <c:set var="localTriggers" value="${customTriggersManager.localCustomTriggers(project)}"/>
 <c:set var="inheritedTriggers" value="${customTriggersManager.inheritedCustomTriggerFiles(project)}"/>
@@ -35,7 +34,7 @@
         <c:forEach var="localTrigger" items="${localTriggers}">
             <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(localTrigger.filePath)}"/>
             <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
-                <c:set var="usages" value="${customTriggersManager.getUsagesInProjectAndSubprojects(localTrigger.filePath, project)}"/>
+                <c:set var="usages" value="${customTriggersManager.getUsages(localTrigger.filePath, project)}"/>
                 <td>
                     <c:out value="${localTrigger.policyName}"/>
                     <c:if test="${not enabled}">
@@ -125,7 +124,7 @@
                     </c:if>
                 </td>
                 <td>
-                    <c:set var="usages" value="${customTriggersManager.getUsagesInProjectAndSubprojects(inheritedTrigger.filePath, project)}"/>
+                    <c:set var="usages" value="${customTriggersManager.getUsages(inheritedTrigger.filePath, project)}"/>
                     <c:if test="${empty usages}">
                         No usages
                     </c:if>

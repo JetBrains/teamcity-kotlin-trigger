@@ -4,12 +4,14 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.buildTriggers.BuildTriggerDescriptor
 import jetbrains.buildServer.buildTriggers.BuildTriggerService
 import jetbrains.buildServer.buildTriggers.async.AsyncPolledBuildTriggerFactory
-import jetbrains.buildServer.buildTriggers.remote.controller.CUSTOM_TRIGGER_PROPERTIES_CONTROLLER
+import jetbrains.buildServer.buildTriggers.remote.controller.CUSTOM_TRIGGERS_LIST_CONTROLLER
 import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.PropertiesProcessor
 import jetbrains.buildServer.util.TimeService
 import jetbrains.buildServer.web.openapi.PluginDescriptor
+import org.springframework.stereotype.Service
 
+@Service
 class CustomTriggerService(
     private val myPluginDescriptor: PluginDescriptor,
     factory: AsyncPolledBuildTriggerFactory,
@@ -55,7 +57,7 @@ class CustomTriggerService(
     }
 
     override fun getEditParametersUrl() =
-        myPluginDescriptor.getPluginResourcesPath(CUSTOM_TRIGGER_PROPERTIES_CONTROLLER)
+        myPluginDescriptor.getPluginResourcesPath(CUSTOM_TRIGGERS_LIST_CONTROLLER)
 
     override fun getBuildTriggeringPolicy() = myPolicy
     override fun isMultipleTriggersPerBuildTypeAllowed() = true
