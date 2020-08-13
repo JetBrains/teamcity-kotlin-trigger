@@ -1,5 +1,6 @@
-<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DeleteTriggerController" %>
-<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DisableTriggerController" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DeletePolicyAction" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DisablePolicyAction" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.PolicyActionController" %>
 
 <script>
     BS.TriggerPolicy = {
@@ -18,11 +19,12 @@
                 title: action + ' triggering policy',
                 action: function () {
                     let completed = $j.Deferred();
-                    BS.ajaxRequest(window["base_uri"] + '${DisableTriggerController.PATH}', {
+                    BS.ajaxRequest(window["base_uri"] + '${PolicyActionController.PATH}', {
                         parameters: {
+                            '${DisablePolicyAction.ACTION_KEY}': '${DisablePolicyAction.ACTION}',
                             triggerPolicyName,
                             enable,
-                            projectId: '${project.projectId}'
+                            projectId: '${project.externalId}'
                         },
                         onComplete: function () {
                             completed.resolve();
@@ -34,7 +36,7 @@
             });
         },
 
-        delete: function (fileName, policyName) {
+        delete: function (policyName) {
             BS.confirmDialog.show({
                 text: 'Delete "' + policyName + '" triggering policy?',
                 actionButtonText: 'Delete',
@@ -42,10 +44,11 @@
                 title: 'Delete triggering policy',
                 action: function () {
                     let completed = $j.Deferred();
-                    BS.ajaxRequest(window["base_uri"] + '${DeleteTriggerController.PATH}', {
+                    BS.ajaxRequest(window["base_uri"] + '${PolicyActionController.PATH}', {
                         parameters: {
-                            fileName,
-                            projectId: '${project.projectId}'
+                            '${DeletePolicyAction.ACTION_KEY}': '${DeletePolicyAction.ACTION}',
+                            policyName,
+                            projectId: '${project.externalId}'
                         },
                         onComplete: function () {
                             completed.resolve();

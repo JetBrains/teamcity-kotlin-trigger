@@ -14,17 +14,26 @@ internal class TriggerActions(
     private val myTriggerPolicyManager: TriggerPolicyManager,
     private val myLogger: Logger
 ) {
-    private val myExecutor = Executors.newSingleThreadExecutor()
 
     fun triggerBuild(triggerPolicyName: String, context: TriggerContext): TriggerBuildResponse {
         val triggerPolicy = loadTriggerPolicy(triggerPolicyName)
+
+        var executorThread: Thread? = null
+        val executor = Executors.newSingleThreadExecutor()
+
+        val future = executor.submit<Boolean> {
+            executorThread = Thread.currentThread()
+            triggerPolicy.triggerBuild(context)
+        }
+
         val answer = try {
-            myExecutor.submit<Boolean> {
-                triggerPolicy.triggerBuild(context)
-            }.get(TIMEOUT, TIMEOUT_UNIT)
+            future.get(TIMEOUT, TIMEOUT_UNIT)
         } catch (e: TimeoutException) {
+            executorThread!!.stop()
+            executor.shutdownNow()
             throw triggerInvocationTimeoutError(triggerPolicyName)
         } catch (e: ExecutionException) {
+            executor.shutdownNow()
             myLogger.severe("Failed to call triggerBuild() on trigger policy $triggerPolicyName")
             throw internalTriggerPolicyError(e.cause!!)
         }

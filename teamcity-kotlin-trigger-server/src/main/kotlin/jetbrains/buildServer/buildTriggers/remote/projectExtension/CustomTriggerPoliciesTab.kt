@@ -3,7 +3,7 @@ package jetbrains.buildServer.buildTriggers.remote.projectExtension
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager
 import jetbrains.buildServer.buildTriggers.remote.PermissionChecker
-import jetbrains.buildServer.buildTriggers.remote.controller.findProjectByRequest
+import jetbrains.buildServer.buildTriggers.remote.findProjectByRequest
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.web.openapi.*
 import org.springframework.stereotype.Component

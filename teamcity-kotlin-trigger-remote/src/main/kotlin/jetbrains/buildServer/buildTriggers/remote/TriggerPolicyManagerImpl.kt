@@ -22,6 +22,7 @@ internal class TriggerPolicyManagerImpl(private val myTriggerPolicyDirPath: Path
         triggerPolicyPath(triggerPolicyName)
             .toFile()
             .writeBytes(bytes)
+        myTriggerPolicyMap.remove(triggerPolicyName)
     }
 
     private fun triggerPolicyPath(triggerPolicyName: String) = myTriggerPolicyDirPath.resolve("$triggerPolicyName.jar")

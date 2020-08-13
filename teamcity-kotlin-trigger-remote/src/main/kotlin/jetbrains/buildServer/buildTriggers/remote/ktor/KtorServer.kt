@@ -63,7 +63,11 @@ internal class KtorServer(
         return block(triggerPolicyName, requestBody)
     }
 
-    private fun createServer() = embeddedServer(Netty, host = myHost, port = myPort) {
+    private fun createServer() = embeddedServer(Netty, host = myHost, port = myPort, configure = {
+        callGroupSize = 1
+        workerGroupSize = 1
+        connectionGroupSize = 1
+    }) {
         install(ContentNegotiation) {
             jackson {
                 activateDefaultTyping(TYPE_VALIDATOR)

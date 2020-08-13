@@ -30,23 +30,22 @@ class RemoteTriggerPolicy(
     }
 
     override fun triggerBuild(prev: String?, context: PolledTriggerContext): String? {
-        context.triggerDescriptor.properties.forEach { k, v ->
-            println("$k: '$v'")
-        }
-
         val triggerPolicyPath = TriggerUtil.getTargetTriggerPolicyPath(context.triggerDescriptor.properties)
             ?: run {
                 myLogger.debug("Trigger policy not specified, triggerBuild() invocation skipped")
                 return null
             }
-        if (!myCustomTriggersBean.isTriggerPolicyEnabled(triggerPolicyPath))
+
+        val policyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
+        val project = context.buildType.project
+        if (!myCustomTriggersBean.isTriggerPolicyEnabled(policyName, project))
             return null
 
-        if (myCustomTriggersBean.isTriggerPolicyUpdated(triggerPolicyPath)) {
+        if (myCustomTriggersBean.isTriggerPolicyUpdated(policyName, project)) {
             val triggerPolicyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
             myLogger.debug("Trigger policy '$triggerPolicyName' was updated and will be uploaded")
             uploadTriggerPolicy(triggerPolicyPath) {
-                myCustomTriggersBean.setTriggerPolicyUpdated(triggerPolicyPath, false)
+                myCustomTriggersBean.setTriggerPolicyUpdated(policyName, project, false)
                 doTriggerBuild(triggerPolicyPath, context, true)
             }
         } else {
@@ -101,8 +100,8 @@ class RemoteTriggerPolicy(
             myLogger.debug("UploadTrigger action initialized a new connection")
         }
 
-        val triggerPolicyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
         val triggerPolicyBytes = File(triggerPolicyPath).readBytes()
+        val triggerPolicyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
 
         if (triggerPolicyBytes.isEmpty()) {
             myLogger.error("Failed to upload trigger policy '$triggerPolicyName': it's file is absent")

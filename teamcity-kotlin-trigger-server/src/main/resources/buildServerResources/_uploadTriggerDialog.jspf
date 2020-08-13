@@ -1,14 +1,13 @@
-<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.UploadTriggerController" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.UploadPolicyController" %>
 
 <bs:dialog dialogId="uploadTriggerDialog" title="Upload trigger policy jar"
            closeCommand="BS.UploadTriggerDialog.close()"
            dialogClass="uploadDialog">
-    <forms:multipartForm id="uploadTriggerForm" targetIframe="hidden-iframe"
-                         onsubmit="return BS.UploadTriggerDialog.validate();">
-        <input type="text" id="fileName" name="fileName" value="" class="mediumField" style="display:none;"/>
-        <input type="text" id="projectId" name="projectId" value="${project.projectId}"
-               style="display: none"/>
-        <input type="text" id="updatedFileName" name="updatedFileName" value="" style="display: none"/>
+    <forms:multipartForm id="uploadTriggerForm" targetIframe="hidden-iframe">
+        <input type="hidden" id="fileName" name="fileName" value="" class="mediumField"/>
+        <input type="hidden" id="projectId" name="projectId" value="${project.externalId}"/>
+        <input type="hidden" id="updatedFileName" name="updatedFileName" value=""/>
+
         <table class="runnerFormTable">
             <tr>
                 <th>Trigger Policy</th>
@@ -27,7 +26,7 @@
 </bs:dialog>
 
 <script type="application/javascript">
-    $j('#uploadTriggerForm').attr('action', window["base_uri"] + '${UploadTriggerController.PATH}');
+    $j('#uploadTriggerForm').attr('action', window["base_uri"] + '${UploadPolicyController.PATH}');
 
     BS.UploadTriggerDialog = OO.extend(BS.AbstractWebForm, OO.extend(BS.AbstractModalDialog, OO.extend(BS.FileBrowse, {
         onFileChanged: function (filename) {

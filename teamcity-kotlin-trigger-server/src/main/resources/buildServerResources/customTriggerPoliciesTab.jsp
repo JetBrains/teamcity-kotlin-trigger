@@ -11,7 +11,7 @@
 <bs:linkCSS>${teamcityPluginResourcesPath}_customTriggerPoliciesTab.css</bs:linkCSS>
 
 <c:set var="localTriggers" value="${customTriggersManager.localCustomTriggers(project)}"/>
-<c:set var="inheritedTriggers" value="${customTriggersManager.inheritedCustomTriggerFiles(project)}"/>
+<c:set var="inheritedTriggers" value="${customTriggersManager.inheritedCustomTriggers(project)}"/>
 <c:set var="canEditProject" value="${permissionChecker.canEditProject(project)}"/>
 
 <table class="parametersTable section noMargin" style="border: none">
@@ -32,7 +32,7 @@
         </tr>
         </thead>
         <c:forEach var="localTrigger" items="${localTriggers}">
-            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(localTrigger.filePath)}"/>
+            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(localTrigger.policyName, project)}"/>
             <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
                 <c:set var="usages" value="${customTriggersManager.getUsages(localTrigger.filePath, project)}"/>
                 <td>
@@ -83,7 +83,7 @@
                                           <c:if test="${empty usages}">
                                               <l:li>
                                                   <a href="#"
-                                                     onclick="return BS.TriggerPolicy.delete(String.raw`${localTrigger.fileName}`, String.raw`${localTrigger.policyName}`)"
+                                                     onclick="return BS.TriggerPolicy.delete(String.raw`${localTrigger.policyName}`)"
                                                      title="Delete this policy">Delete...</a>
                                               </l:li>
                                           </c:if>
@@ -115,7 +115,7 @@
         </tr>
         </thead>
         <c:forEach var="inheritedTrigger" items="${inheritedTriggers}">
-            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(inheritedTrigger.filePath)}"/>
+            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(inheritedTrigger.policyName, project)}"/>
             <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
                 <td>
                     <c:out value="${inheritedTrigger.policyName}"/>
