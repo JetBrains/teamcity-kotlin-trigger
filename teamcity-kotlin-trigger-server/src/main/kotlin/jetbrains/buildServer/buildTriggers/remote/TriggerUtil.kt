@@ -2,6 +2,8 @@ package jetbrains.buildServer.buildTriggers.remote
 
 import jetbrains.buildServer.buildTriggers.PolledTriggerContext
 import jetbrains.buildServer.serverSide.CustomDataStorage
+import jetbrains.buildServer.serverSide.SBuild
+import jetbrains.buildServer.serverSide.SBuildType
 import jetbrains.buildServer.util.TimeService
 
 internal object TriggerUtil {
@@ -9,7 +11,9 @@ internal object TriggerUtil {
     fun createTriggerBuildContext(context: PolledTriggerContext, timeService: TimeService) = TriggerContext(
         timeService.now(),
         parseTriggerProperties(context.triggerDescriptor.properties) ?: emptyMap(),
-        getCustomDataStorageOfTrigger(context).values?.toMutableMap() ?: mutableMapOf()
+        getCustomDataStorageOfTrigger(context).values?.toMutableMap() ?: mutableMapOf(),
+        context.buildType.convert(),
+        null
     )
 
     fun parseTriggerProperties(properties: Map<String, String>): Map<String, String>? {
@@ -33,4 +37,37 @@ internal object TriggerUtil {
 
     fun getTargetTriggerPolicyPath(properties: Map<String, String>): String? =
         properties[Constants.TRIGGER_POLICY_PATH]
+
+    private fun SBuildType.convert(): BuildType {
+        val project = Project(project.externalId, project.isArchived)
+
+        val history = history.map {
+            FinishedBuild(it.finishDate, it.convert())
+        }
+
+        val lastChangesStartedBuild = lastChangesStartedBuild?.convert()
+        val lastChangesSuccessfullyFinished = lastChangesSuccessfullyFinished?.convert()
+        val lastChangesFinished = lastChangesFinished?.convert()
+
+        return BuildType(
+            externalId,
+            isInQueue,
+            isPaused,
+            project,
+            history,
+            lastChangesStartedBuild,
+            lastChangesSuccessfullyFinished,
+            lastChangesFinished,
+            buildParameters,
+            parameters,
+            tags
+        )
+    }
+
+    private fun SBuild.convert() = Build(
+        buildId,
+        startDate,
+        isFinished,
+        duration
+    )
 }

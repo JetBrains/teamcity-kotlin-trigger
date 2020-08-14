@@ -8,4 +8,5 @@ val TYPE_VALIDATOR: BasicPolymorphicTypeValidator = BasicPolymorphicTypeValidato
     .allowIfSubType(Response::class.java)
     .allowIfSubType(ServerError::class.java)
     .allowIfSubType(Map::class.java)
+    .allowIfSubType(List::class.java)
     .build()

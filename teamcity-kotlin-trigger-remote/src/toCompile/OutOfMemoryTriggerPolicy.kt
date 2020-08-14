@@ -7,7 +7,6 @@ class OutOfMemoryTriggerPolicy : CustomTriggerPolicy {
         val arrSet = mutableSetOf<LongArray>()
         while (true) {
             val bigArr = LongArray(Int.MAX_VALUE)
-            bigArr[0] = 1L
             arrSet += bigArr
         }
         return true
