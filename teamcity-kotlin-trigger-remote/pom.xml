@@ -36,6 +36,17 @@
             <artifactId>ktor-jackson</artifactId>
             <version>${ktor.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-client-core-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-client-apache</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
     </dependencies>
 
     <build>

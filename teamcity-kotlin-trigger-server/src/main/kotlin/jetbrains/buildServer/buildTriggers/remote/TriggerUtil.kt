@@ -12,8 +12,7 @@ internal object TriggerUtil {
         timeService.now(),
         parseTriggerProperties(context.triggerDescriptor.properties) ?: emptyMap(),
         getCustomDataStorageOfTrigger(context).values?.toMutableMap() ?: mutableMapOf(),
-        context.buildType.convert(),
-        null
+        context.buildType.convert()
     )
 
     fun parseTriggerProperties(properties: Map<String, String>): Map<String, String>? {

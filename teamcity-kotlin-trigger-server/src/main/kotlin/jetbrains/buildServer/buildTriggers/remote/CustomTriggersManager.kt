@@ -2,6 +2,7 @@ package jetbrains.buildServer.buildTriggers.remote
 
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.serverSide.*
+import jetbrains.buildServer.serverSide.crypt.EncryptUtil
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 import org.springframework.stereotype.Component
 import java.io.File
@@ -15,6 +16,7 @@ class CustomTriggersManager(myPluginDescriptor: PluginDescriptor, private val my
     private val myPluginName = myPluginDescriptor.pluginName
     private val myTriggerPolicyUpdatedMap = mutableMapOf<String, Boolean>()
     private val myPolicyEnabledParam = "enabled"
+    private val myPolicyAuthTokenParam = "authToken"
 
     fun createCustomTriggerPolicy(policyName: String, project: SProject): CustomTriggerPolicyDescriptor {
         val policyPath = project.getPathOfOwnPolicy(policyName)
@@ -40,6 +42,22 @@ class CustomTriggersManager(myPluginDescriptor: PluginDescriptor, private val my
         return policyPath
     }
 
+    fun getTriggerPolicyAuthToken(policyName: String, project: SProject): String? {
+        val tokenFeature = project.getPolicyFeature(policyName) ?: return null
+        val token = tokenFeature.parameters[myPolicyAuthTokenParam]
+        if (token.isNullOrEmpty()) return null
+
+        return EncryptUtil.unscramble(token)
+    }
+
+    fun setTriggerPolicyAuthToken(policyName: String, project: SProject, token: String) {
+        val scrambled = EncryptUtil.scramble(token)
+        project.updatePolicyFeature(policyName, myPolicyAuthTokenParam to scrambled)
+    }
+
+    fun deleteTriggerPolicyAuthToken(policyName: String, project: SProject) =
+        setTriggerPolicyAuthToken(policyName, project, "")
+
     fun isTriggerPolicyEnabled(policyName: String, project: SProject): Boolean {
         val definingProject = project.getAncestorDefiningPolicy(policyName)
         val policyFeature = definingProject?.getPolicyFeature(policyName) ?: run {
@@ -58,7 +76,7 @@ class CustomTriggersManager(myPluginDescriptor: PluginDescriptor, private val my
             myLogger.debug(project.policyDoesNotExistMessage(policyName))
             return
         }
-        definingProject.updateOrCreatePolicyFeature(policyName, myPolicyEnabledParam to enabled.toString())
+        definingProject.updatePolicyFeature(policyName, myPolicyEnabledParam to enabled.toString())
     }
 
     fun isTriggerPolicyUpdated(policyName: String, project: SProject): Boolean {
@@ -136,7 +154,7 @@ private fun SProject.createPolicyFeature(policyName: String) = addFeature(myFeat
 private fun SProject.getPolicyFeature(policyName: String): SProjectFeatureDescriptor? =
     getAvailableFeaturesOfType(myFeaturePrefix + policyName).firstOrNull()
 
-private fun SProject.updateOrCreatePolicyFeature(policyName: String, vararg entries: Pair<String, String>) {
+private fun SProject.updatePolicyFeature(policyName: String, vararg entries: Pair<String, String>) {
     val feature = getPolicyFeature(policyName) ?: return
 
     val params = feature.parameters.toMutableMap()

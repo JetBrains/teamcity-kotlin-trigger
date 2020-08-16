@@ -15,15 +15,18 @@ internal class TriggerActions(
     private val myLogger: Logger
 ) {
 
-    fun triggerBuild(triggerPolicyName: String, context: TriggerContext): TriggerBuildResponse {
-        val triggerPolicy = loadTriggerPolicy(triggerPolicyName)
-
+    fun triggerBuild(triggerPolicyName: String, requestBody: TriggerBuildRequestBody): TriggerBuildResponse {
         var executorThread: Thread? = null
         val executor = Executors.newSingleThreadExecutor()
 
+        val policyContext = PolicyContextImpl(requestBody.authToken)
+
         val future = executor.submit<Boolean> {
             executorThread = Thread.currentThread()
-            triggerPolicy.triggerBuild(context)
+
+            loadTriggerPolicy(triggerPolicyName).run {
+                policyContext.triggerBuild(requestBody.context)
+            }
         }
 
         val answer = try {
@@ -32,14 +35,19 @@ internal class TriggerActions(
             executorThread!!.stop()
             executor.shutdownNow()
             throw triggerInvocationTimeoutError(triggerPolicyName)
+
         } catch (e: ExecutionException) {
             executor.shutdownNow()
             myLogger.severe("Failed to call triggerBuild() on trigger policy $triggerPolicyName")
+
+            if (e.cause is TriggerPolicyDoesNotExistError || e.cause is TriggerPolicyLoadingError)
+                throw e.cause!!
+
             throw internalTriggerPolicyError(e.cause!!)
         }
 
         myLogger.info("Trigger $triggerPolicyName is sending response: $answer")
-        return TriggerBuildResponse(answer, context.customData)
+        return TriggerBuildResponse(answer, requestBody.context.customData)
     }
 
     fun saveTriggerPolicy(triggerPolicyName: String, triggerPolicyBody: TriggerPolicyBody): OkayResponse {
@@ -54,6 +62,7 @@ internal class TriggerActions(
         } catch (e: TriggerPolicyDoesNotExistException) {
             throw triggerPolicyDoesNotExistError(triggerPolicyName)
         } catch (e: Throwable) {
+            e.printStackTrace()
             throw triggerPolicyLoadingError(e)
         }
 }

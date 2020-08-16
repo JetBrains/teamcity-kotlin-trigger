@@ -3,7 +3,7 @@ package jetbrains.buildServer.buildTriggers.remote.compiled
 import jetbrains.buildServer.buildTriggers.remote.*
 
 class ScheduleTriggerPolicy : CustomTriggerPolicy {
-    override fun triggerBuild(context: TriggerContext): Boolean = with(context) {
+    override fun PolicyContext.triggerBuild(context: TriggerContext): Boolean = with(context) {
         val delay = properties["delay"]?.toIntOrNull() ?: -1
         val prevoiusSuccessTime = context.customData["previousSuccessTime"]?.toLongOrNull()
         val answer = when {

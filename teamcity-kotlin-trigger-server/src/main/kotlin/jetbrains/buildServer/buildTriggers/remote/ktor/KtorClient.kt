@@ -32,10 +32,10 @@ internal class KtorClient(private val myHost: String, private val myPort: Int) {
     var closed = false
         private set
 
-    fun sendTriggerBuild(triggerPolicyName: String, context: TriggerContext): TriggerBuildResponse =
+    fun sendTriggerBuild(triggerPolicyName: String, requestBody: TriggerBuildRequestBody): TriggerBuildResponse =
         makeRequest(
             RequestMapping.triggerBuild(triggerPolicyName),
-            context
+            requestBody
         ) { response: Response ->
             when (response) {
                 is TriggerBuildResponse -> return response

@@ -5,4 +5,4 @@ internal interface TriggerPolicyManager {
     fun saveTriggerPolicy(triggerPolicyName: String, bytes: ByteArray)
 }
 
-class TriggerPolicyDoesNotExistException : RuntimeException()
+internal class TriggerPolicyDoesNotExistException : RuntimeException()

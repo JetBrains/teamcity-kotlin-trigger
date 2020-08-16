@@ -12,7 +12,7 @@ private const val PORT = 8080
 
 class RemoteTriggerPolicy(
     private val myTimeService: TimeService,
-    private val myCustomTriggersBean: CustomTriggersManager
+    private val myCustomTriggersManager: CustomTriggersManager
 ) : BaseAsyncPolledBuildTrigger() {
 
     private val myLogger = Logger.getInstance(RemoteTriggerPolicy::class.qualifiedName)
@@ -38,14 +38,14 @@ class RemoteTriggerPolicy(
 
         val policyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
         val project = context.buildType.project
-        if (!myCustomTriggersBean.isTriggerPolicyEnabled(policyName, project))
+        if (!myCustomTriggersManager.isTriggerPolicyEnabled(policyName, project))
             return null
 
-        if (myCustomTriggersBean.isTriggerPolicyUpdated(policyName, project)) {
+        if (myCustomTriggersManager.isTriggerPolicyUpdated(policyName, project)) {
             val triggerPolicyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
             myLogger.debug("Trigger policy '$triggerPolicyName' was updated and will be uploaded")
             uploadTriggerPolicy(triggerPolicyPath) {
-                myCustomTriggersBean.setTriggerPolicyUpdated(policyName, project, false)
+                myCustomTriggersManager.setTriggerPolicyUpdated(policyName, project, false)
                 doTriggerBuild(triggerPolicyPath, context, true)
             }
         } else {
@@ -65,10 +65,14 @@ class RemoteTriggerPolicy(
         }
 
         val triggerPolicyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
+
         val triggerBuildContext = TriggerUtil.createTriggerBuildContext(context, myTimeService)
+        val authToken = myCustomTriggersManager.getTriggerPolicyAuthToken(triggerPolicyName, context.buildType.project)
+
+        val triggerBuildRequestBody = TriggerBuildRequestBody(triggerBuildContext, authToken)
 
         val triggerBuildResponse = try {
-            client.sendTriggerBuild(triggerPolicyName, triggerBuildContext)
+            client.sendTriggerBuild(triggerPolicyName, triggerBuildRequestBody)
         } catch (e: TriggerPolicyDoesNotExistError) {
             myLogger.warn(e.message)
             if (shouldTryUpload) {
