@@ -10,13 +10,13 @@ internal object TriggerUtil {
 
     fun createTriggerBuildContext(context: PolledTriggerContext, timeService: TimeService) = TriggerContext(
         timeService.now(),
-        parseTriggerProperties(context.triggerDescriptor.properties) ?: emptyMap(),
+        parseTriggerAdditionalProperties(context.triggerDescriptor.properties) ?: emptyMap(),
         getCustomDataStorageOfTrigger(context).values?.toMutableMap() ?: mutableMapOf(),
         context.buildType.convert()
     )
 
-    fun parseTriggerProperties(properties: Map<String, String>): Map<String, String>? {
-        return properties[Constants.PROPERTIES].orEmpty()
+    fun parseTriggerAdditionalProperties(properties: Map<String, String>): Map<String, String>? {
+        return properties[Constants.ADDITIONAL_PROPERTIES].orEmpty()
             .lines()
             .map { it.trim() }
             .filterNot { it.isEmpty() }

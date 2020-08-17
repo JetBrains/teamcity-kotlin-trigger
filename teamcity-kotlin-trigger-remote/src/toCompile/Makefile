@@ -1,6 +1,6 @@
 KC = ${KOTLIN_HOME}\kotlinc
 DOMAIN = jetbrains\buildServer\buildTriggers\remote
-IMPORTS = ..\main\kotlin\$(DOMAIN)\CustomTriggerPolicy.kt ..\..\..\teamcity-kotlin-trigger-common\src\main\kotlin\$(DOMAIN)\RequestBody.kt ..\..\..\teamcity-kotlin-trigger-common\src\main\kotlin\$(DOMAIN)\BuildType.kt
+IMPORTS = ..\main\kotlin\$(DOMAIN)\CustomTriggerPolicy.kt ..\..\..\teamcity-kotlin-trigger-common\src\main\kotlin\$(DOMAIN)\RequestBody.kt ..\..\..\teamcity-kotlin-trigger-common\src\main\kotlin\$(DOMAIN)\BuildType.kt ..\..\..\teamcity-kotlin-trigger-common\src\main\kotlin\$(DOMAIN)\annotation\CustomTriggerProperties.kt
 OUT = ..\compiled
 
 .PHONY: clearUnnecessary

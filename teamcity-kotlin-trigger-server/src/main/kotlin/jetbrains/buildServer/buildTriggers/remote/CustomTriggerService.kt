@@ -5,9 +5,11 @@ import jetbrains.buildServer.buildTriggers.BuildTriggerDescriptor
 import jetbrains.buildServer.buildTriggers.BuildTriggerService
 import jetbrains.buildServer.buildTriggers.async.AsyncPolledBuildTriggerFactory
 import jetbrains.buildServer.buildTriggers.remote.controller.CUSTOM_TRIGGERS_LIST_CONTROLLER
+import jetbrains.buildServer.buildTriggers.remote.controller.CustomTriggerPropertiesController
 import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.PropertiesProcessor
+import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.TimeService
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 import org.springframework.stereotype.Service
@@ -48,7 +50,11 @@ class CustomTriggerService(
 
     override fun getTriggerPropertiesProcessor() = PropertiesProcessor { properties: Map<String, String> ->
         val triggerPolicy = TriggerUtil.getTargetTriggerPolicyPath(properties)
-        val triggerProperties = TriggerUtil.parseTriggerProperties(properties)
+        val triggerProperties = TriggerUtil.parseTriggerAdditionalProperties(properties)
+
+        val requiredMap = properties["requiredMap"]
+            ?.let { CustomTriggerPropertiesController.deserializeMap(it) }
+            ?: emptyMap()
 
         val errors = mutableListOf<InvalidProperty>()
 
@@ -58,7 +64,13 @@ class CustomTriggerService(
             addInvalidProperty(Constants.TRIGGER_POLICY_PATH, "A trigger policy should be specified")
 
         if (triggerProperties == null)
-            addInvalidProperty(Constants.PROPERTIES, "Properties should be 'key=value' pairs on separate lines")
+            addInvalidProperty(Constants.ADDITIONAL_PROPERTIES, "Properties should be 'key=value' pairs on separate lines")
+
+        for ((propertyName, requiredStr) in requiredMap) {
+            if (StringUtil.isTrue(requiredStr) && properties[propertyName].isNullOrEmpty()) {
+                addInvalidProperty(propertyName, "This property is required")
+            }
+        }
 
         errors
     }
