@@ -2,6 +2,7 @@
 
 <%@ include file="_uploadTriggerDialog.jspf" %>
 <%@ include file="_customTriggerPolicyActions.jspf" %>
+<%@ include file="_assignAccessTokenDialog.jspf" %>
 
 <jsp:useBean id="customTriggersManager" type="jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager"
              scope="request"/>
@@ -35,7 +36,13 @@
             <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(localTrigger.policyName, project)}"/>
             <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
                 <c:set var="usages" value="${customTriggersManager.getUsages(localTrigger.filePath, project)}"/>
+                <c:set var="hasToken"
+                       value="${not empty customTriggersManager.getTriggerPolicyAuthToken(localTrigger.policyName, project)}"/>
                 <td>
+                    <c:if test="${hasToken}">
+                        <span onmouseover="BS.Tooltip.showMessageAtCursor(event, {shift:{x:5,y:10}}, 'This policy has an access token assigned');"
+                              onmouseout="BS.Tooltip.hidePopup();"><bs:buildStatusIcon type="red-sign" className="warningIcon"/></span>
+                    </c:if>
                     <c:out value="${localTrigger.policyName}"/>
                     <c:if test="${not enabled}">
                         <span class="inheritedParam">(disabled)</span>
@@ -51,19 +58,18 @@
                 </td>
                 <c:if test="${canEditProject}">
                     <td class="edit" style="border: 1px solid #ccc">
-                        <c:set var="canEditSubprojects"
-                               value="${permissionChecker.canEditBuildTypeIdentities(usages)}"/>
+                        <c:set var="canEditSubprojects" value="${permissionChecker.canEditBuildTypeIdentities(usages)}"/>
                         <bs:actionsPopup controlId="pA_local_${localTrigger.policyName}"
                                          popup_options="shift: {x: -150, y: 20}, className: 'quickLinksMenuPopup'">
                             <jsp:attribute name="content">
                               <div>
                                   <ul class="menuList">
-                                      <l:li>
-                                        <a href="#"
-                                           onclick="return BS.TriggerPolicy.update(String.raw`${localTrigger.fileName}`)"
-                                           title="Update trigger policy">Update...</a>
-                                      </l:li>
                                       <c:if test="${canEditSubprojects}">
+                                          <l:li>
+                                            <a href="#"
+                                               onclick="return BS.TriggerPolicy.update(String.raw`${localTrigger.fileName}`)"
+                                               title="Update trigger policy">Update...</a>
+                                          </l:li>
                                           <c:choose>
                                           <c:when test="${enabled}">
                                               <l:li>
@@ -87,6 +93,22 @@
                                                      title="Delete this policy">Delete...</a>
                                               </l:li>
                                           </c:if>
+                                          <c:choose>
+                                          <c:when test="${hasToken}">
+                                              <l:li>
+                                                  <a href="#"
+                                                     onclick="return BS.TriggerPolicy.removeToken(String.raw`${localTrigger.policyName}`)"
+                                                     title="Remove the assigned access token from this policy">Remove access token...</a>
+                                              </l:li>
+                                          </c:when>
+                                          <c:otherwise>
+                                              <l:li>
+                                                  <a href="#"
+                                                     onclick="return BS.TriggerPolicy.assignToken(String.raw`${localTrigger.policyName}`)"
+                                                     title="Assign an access token to this policy">Assign an access token...</a>
+                                              </l:li>
+                                          </c:otherwise>
+                                          </c:choose>
                                       </c:if>
                                   </ul>
                               </div>
@@ -118,6 +140,12 @@
             <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(inheritedTrigger.policyName, project)}"/>
             <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
                 <td>
+                    <c:set var="hasToken"
+                           value="${not empty customTriggersManager.getTriggerPolicyAuthToken(inheritedTrigger.policyName, project)}"/>
+                    <c:if test="${hasToken}">
+                        <span onmouseover="BS.Tooltip.showMessageAtCursor(event, {shift:{x:5,y:10}}, 'This policy has an access token assigned');"
+                              onmouseout="BS.Tooltip.hidePopup();"><bs:buildStatusIcon type="red-sign" className="warningIcon"/></span>
+                    </c:if>
                     <c:out value="${inheritedTrigger.policyName}"/>
                     <c:if test="${not enabled}">
                         <span class="inheritedParam">(disabled)</span>

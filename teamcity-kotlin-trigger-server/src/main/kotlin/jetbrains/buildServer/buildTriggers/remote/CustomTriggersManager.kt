@@ -50,9 +50,12 @@ class CustomTriggersManager(myPluginDescriptor: PluginDescriptor, private val my
         return EncryptUtil.unscramble(token)
     }
 
-    fun setTriggerPolicyAuthToken(policyName: String, project: SProject, token: String) {
-        val scrambled = EncryptUtil.scramble(token)
-        project.updatePolicyFeature(policyName, myPolicyAuthTokenParam to scrambled)
+    fun setTriggerPolicyAuthToken(policyName: String, project: SProject, newToken: String) {
+        val token =
+            if (newToken.isBlank()) ""
+            else EncryptUtil.scramble(newToken)
+
+        project.updatePolicyFeature(policyName, myPolicyAuthTokenParam to token)
     }
 
     fun deleteTriggerPolicyAuthToken(policyName: String, project: SProject) =

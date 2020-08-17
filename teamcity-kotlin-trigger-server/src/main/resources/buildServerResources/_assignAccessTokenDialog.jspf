@@ -1,0 +1,92 @@
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.AssignAccessTokenAction" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.PolicyActionController" %>
+
+<jsp:useBean id="publicKey" scope="request" type="java.lang.String"/>
+
+<bs:dialog dialogId="assignAccessTokenDialog" title="Assign an access token"
+           closeCommand="BS.AssignAccessTokenDialog.close()"
+           dialogClass="assignAccessTokenDialog">
+    <form id="assignAccessTokenForm" onsubmit="return BS.AssignAccessTokenDialog.submitToken();" method="post">
+        <input type="hidden" id="accessToken_${AssignAccessTokenAction.ACTION_KEY}" name="${AssignAccessTokenAction.ACTION_KEY}" value="${AssignAccessTokenAction.ACTION}">
+        <input type="hidden" id="accessToken_projectId" name="projectId" value="${project.externalId}"/>
+        <input type="hidden" id="accessToken_policyName" name="policyName" value=""/>
+
+        <table class="runnerFormTable">
+            <tr class="formField">
+                <th><label for="token">Access token:</label></th>
+                <td><input class="text" id="token" type="password" name="token" style="width: 100%;"></td>
+            </tr>
+        </table>
+        <div id="errorMessage"></div>
+        <div class="popupSaveButtonsBlock">
+            <forms:submit id="assignAccessTokenDialogSubmit" label="Assign an access token"/>
+            <forms:cancel onclick="BS.AssignAccessTokenDialog.close()"/>
+            <forms:saving id="assigningProgress" savingTitle="Assigning..."/>
+        </div>
+
+        <input id="remember" type="hidden" name="remember" value="false">
+        <input type="hidden" id="publicKey" name="publicKey" value="${publicKey}"/>
+    </form>
+</bs:dialog>
+
+<script type="application/javascript">
+    $j('#assignAccessTokenForm').attr('action', window["base_uri"] + '${PolicyActionController.PATH}');
+
+    BS.AccessTokenListener = OO.extend(BS.ErrorsAwareListener, {
+        _toHandlerName: function (errorKey) {
+            return 'on' + errorKey.charAt(0).toUpperCase() + errorKey.slice(1) + 'Error'
+        },
+
+        _addHandler: function (errorKey, fun) {
+            this[this._toHandlerName(errorKey)] = fun
+        },
+
+        onCompleteSave: function(form, responseXML, errStatus) {
+            if (errStatus) {
+                form.setSaving(false);
+                form.enable();
+                form.focusFirstErrorField();
+            }
+
+            if (!errStatus) {
+                BS.AssignAccessTokenDialog.refresh()
+            }
+        }
+    });
+
+    BS.AccessTokenListener._addHandler('${AssignAccessTokenAction.ERROR_KEY}', function (elem) {
+        $("errorMessage").innerHTML = elem.firstChild.nodeValue;
+        BS.Util.show("errorMessage");
+        BS.AssignAccessTokenDialog.highlightErrorField($("token"));
+    })
+
+    BS.AssignAccessTokenDialog = OO.extend(BS.AbstractPasswordForm, OO.extend(BS.AbstractModalDialog, {
+
+        getContainer: function () {
+            return $('assignAccessTokenDialog');
+        },
+
+        formElement: function () {
+            return $('assignAccessTokenForm');
+        },
+
+        refresh: function () {
+            BS.reload(true);
+        },
+
+        savingIndicator: function () {
+            return $j('#assigningProgress');
+        },
+
+        open: function (policyName) {
+            $j('#accessToken_policyName').val(policyName)
+            this.showCentered();
+            return false;
+        },
+
+        submitToken: function () {
+            BS.PasswordFormSaver.save(this, this.formElement().action, BS.AccessTokenListener);
+            return false;
+        }
+    }))
+</script>

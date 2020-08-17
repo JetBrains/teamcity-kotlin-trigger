@@ -18,13 +18,16 @@ class PolicyActionController(
     myProjectManager: ProjectManager,
     myCustomTriggersManager: CustomTriggersManager
 ) : BaseAjaxActionController(myWebControllerManager) {
+
     companion object {
         const val PATH = "/admin/customTriggerPolicyAction.html"
     }
 
     init {
-        myWebControllerManager.registerAction(this, DisablePolicyAction(myProjectManager, myCustomTriggersManager))
-        myWebControllerManager.registerAction(this, DeletePolicyAction(myProjectManager, myCustomTriggersManager))
+        registerAction(DisablePolicyAction(myProjectManager, myCustomTriggersManager))
+        registerAction(DeletePolicyAction(myProjectManager, myCustomTriggersManager))
+        registerAction(AssignAccessTokenAction(myProjectManager, myCustomTriggersManager))
+        registerAction(RemoveAccessTokenAction(myProjectManager, myCustomTriggersManager))
 
         myWebControllerManager.registerController(PATH, this)
     }

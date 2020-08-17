@@ -1,6 +1,7 @@
 <%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DeletePolicyAction" %>
 <%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DisablePolicyAction" %>
 <%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.PolicyActionController" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.RemoveAccessTokenAction" %>
 
 <script>
     BS.TriggerPolicy = {
@@ -47,6 +48,34 @@
                     BS.ajaxRequest(window["base_uri"] + '${PolicyActionController.PATH}', {
                         parameters: {
                             '${DeletePolicyAction.ACTION_KEY}': '${DeletePolicyAction.ACTION}',
+                            policyName,
+                            projectId: '${project.externalId}'
+                        },
+                        onComplete: function () {
+                            completed.resolve();
+                            BS.reload(true);
+                        }
+                    });
+                    return completed;
+                }
+            });
+        },
+
+        assignToken: function (policyName) {
+            return BS.AssignAccessTokenDialog.open(policyName);
+        },
+
+        removeToken: function (policyName) {
+            BS.confirmDialog.show({
+                text: 'Remove the assigned access token from "' + policyName + '" triggering policy?',
+                actionButtonText: 'Remove',
+                cancelButtonText: 'Cancel',
+                title: 'Remove access token',
+                action: function () {
+                    let completed = $j.Deferred();
+                    BS.ajaxRequest(window["base_uri"] + '${PolicyActionController.PATH}', {
+                        parameters: {
+                            '${RemoveAccessTokenAction.ACTION_KEY}': '${RemoveAccessTokenAction.ACTION}',
                             policyName,
                             projectId: '${project.externalId}'
                         },
