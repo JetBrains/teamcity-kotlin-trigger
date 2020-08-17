@@ -12,8 +12,6 @@
     <artifactId>teamcity-kotlin-trigger-common</artifactId>
     <packaging>jar</packaging>
 
-    <name>com.jetbrains.teamcity.kotlin.trigger teamcity-kotlin-trigger-common</name>
-
     <properties>
         <kotlin.version>1.3.72</kotlin.version>
         <ktor.version>1.3.2</ktor.version>
