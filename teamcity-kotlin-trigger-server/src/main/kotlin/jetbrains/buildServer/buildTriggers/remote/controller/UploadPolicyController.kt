@@ -57,9 +57,8 @@ internal class UploadPolicyController(
             if (updateMode && updatedFileName != triggerJarName)
                 throw UploadException("Uploaded jar's filename doesn't match the updated file's name")
 
-            if (!updateMode && localPolicyExists) {
+            if (!updateMode && localPolicyExists)
                 throw UploadException("File is already loaded to this project")
-            }
 
             if (ancestor != null)
                 throw UploadException("File is already loaded to this project's ancestor '${ancestor.fullName}'")

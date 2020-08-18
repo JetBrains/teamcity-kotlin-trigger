@@ -1,5 +1,5 @@
-<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.AssignAccessTokenAction" %>
 <%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.PolicyActionController" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.action.AssignAccessTokenAction" %>
 
 <jsp:useBean id="publicKey" scope="request" type="java.lang.String"/>
 
@@ -12,6 +12,9 @@
         <input type="hidden" id="accessToken_policyName" name="policyName" value=""/>
 
         <table class="runnerFormTable">
+            <tr>
+                <td colspan="2"><em>Provide all triggers of this policy with a token to allow them accessing the <strong>REST API</strong> <bs:help file="Authentication+Modules" anchor="tokenBasedAuth"/></em></td>
+            </tr>
             <tr class="formField">
                 <th><label for="token">Access token:</label></th>
                 <td><input class="text" id="token" type="password" name="token" style="width: 100%;"></td>
@@ -24,7 +27,7 @@
             <forms:saving id="assigningProgress" savingTitle="Assigning..."/>
         </div>
 
-        <input id="remember" type="hidden" name="remember" value="false">
+        <input type="hidden" id="remember" name="remember" value="false">
         <input type="hidden" id="publicKey" name="publicKey" value="${publicKey}"/>
     </form>
 </bs:dialog>

@@ -1,7 +1,8 @@
-package jetbrains.buildServer.buildTriggers.remote.controller
+package jetbrains.buildServer.buildTriggers.remote.controller.action
 
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager
+import jetbrains.buildServer.buildTriggers.remote.controller.PolicyAction
 import jetbrains.buildServer.buildTriggers.remote.findProjectByRequest
 import jetbrains.buildServer.serverSide.ProjectManager
 import javax.servlet.http.HttpServletRequest
@@ -10,7 +11,10 @@ import javax.servlet.http.HttpServletResponse
 class DisablePolicyAction(
     private val myProjectManager: ProjectManager,
     private val myCustomTriggersManager: CustomTriggersManager
-) : PolicyAction(ACTION, ERROR_KEY) {
+) : PolicyAction(
+    ACTION,
+    ERROR_KEY
+) {
 
     private val myLogger = Logger.getInstance(DisablePolicyAction::class.qualifiedName)
 

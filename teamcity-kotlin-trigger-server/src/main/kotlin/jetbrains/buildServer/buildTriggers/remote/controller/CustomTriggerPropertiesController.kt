@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import jetbrains.buildServer.buildTriggers.remote.annotation.CustomTriggerProperties
 import jetbrains.buildServer.buildTriggers.remote.annotation.CustomTriggerProperty
-import jetbrains.buildServer.buildTriggers.remote.annotation.PropertyType
 import jetbrains.buildServer.controllers.BaseController
 import jetbrains.buildServer.controllers.BasePropertiesBean
 import jetbrains.buildServer.parameters.ParametersUtil
@@ -20,7 +19,6 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @Controller
-@CustomTriggerProperty("delay", PropertyType.TEXT, "Scheduling delay", true)
 internal class CustomTriggerPropertiesController(
     myWebControllerManager: WebControllerManager,
     private val myPluginDescriptor: PluginDescriptor
@@ -59,7 +57,6 @@ internal class CustomTriggerPropertiesController(
             requiredMap[name] = required.toString()
         }
 
-
         triggerPolicyClass.annotations.forEach { annotation ->
             when(annotation) {
                 is CustomTriggerProperty -> annotation.addParameter()
@@ -75,16 +72,6 @@ internal class CustomTriggerPropertiesController(
         classLoader.close()
 
         return mv
-    }
-
-    private fun CustomTriggerProperty.addToParameterMap(parameters: MutableMap<String, ControlDescription>) {
-        parameters[name] = ParametersUtil.createControlDescription(
-            type.typeName,
-            mapOf(
-                WellknownParameterArguments.ARGUMENT_DESCRIPTION.name to description,
-                WellknownParameterArguments.REQUIRED.name to required.toString()
-            )
-        )
     }
 
     companion object {

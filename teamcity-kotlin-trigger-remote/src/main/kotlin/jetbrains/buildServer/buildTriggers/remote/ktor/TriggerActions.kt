@@ -44,6 +44,8 @@ internal class TriggerActions(
                 throw e.cause!!
 
             throw internalTriggerPolicyError(e.cause!!)
+        } finally {
+            policyContext.close()
         }
 
         myLogger.info("Trigger $triggerPolicyName is sending response: $answer")

@@ -38,7 +38,7 @@ fun triggerPolicyDoesNotExistError(triggerName: String) =
 
 fun triggerPolicyLoadingError(e: Throwable) = TriggerPolicyLoadingError("Exception while loading a trigger policy: $e")
 fun triggerInvocationTimeoutError(triggerName: String) =
-    InternalTriggerPolicyError("Time limit exceeded on trigger $triggerName invocation")
+    TriggerInvocationTimeoutError("Time limit exceeded on trigger $triggerName invocation")
 
 fun internalTriggerPolicyError(e: Throwable) = InternalTriggerPolicyError("Trigger invocation caused an exception: $e")
 fun internalServerError(e: Throwable) = InternalServerError("Internal server error: $e")

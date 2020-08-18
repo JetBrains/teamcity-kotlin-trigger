@@ -1,7 +1,7 @@
-<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DeletePolicyAction" %>
-<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.DisablePolicyAction" %>
 <%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.PolicyActionController" %>
-<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.RemoveAccessTokenAction" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.action.DeletePolicyAction" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.action.DisablePolicyAction" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.remote.controller.action.RemoveAccessTokenAction" %>
 
 <script>
     BS.TriggerPolicy = {

@@ -2,6 +2,10 @@ package jetbrains.buildServer.buildTriggers.remote.controller
 
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager
+import jetbrains.buildServer.buildTriggers.remote.controller.action.AssignAccessTokenAction
+import jetbrains.buildServer.buildTriggers.remote.controller.action.DeletePolicyAction
+import jetbrains.buildServer.buildTriggers.remote.controller.action.DisablePolicyAction
+import jetbrains.buildServer.buildTriggers.remote.controller.action.RemoveAccessTokenAction
 import jetbrains.buildServer.controllers.ActionErrors
 import jetbrains.buildServer.controllers.BaseAjaxActionController
 import jetbrains.buildServer.serverSide.ProjectManager
@@ -26,6 +30,7 @@ class PolicyActionController(
     init {
         registerAction(DisablePolicyAction(myProjectManager, myCustomTriggersManager))
         registerAction(DeletePolicyAction(myProjectManager, myCustomTriggersManager))
+
         registerAction(AssignAccessTokenAction(myProjectManager, myCustomTriggersManager))
         registerAction(RemoveAccessTokenAction(myProjectManager, myCustomTriggersManager))
 
@@ -58,5 +63,5 @@ abstract class PolicyAction(private val actionName: String, private val errorKey
     @Throws(PolicyActionException::class)
     abstract fun processPost(request: HttpServletRequest, response: HttpServletResponse)
 
-    protected class PolicyActionException(msg: String): RuntimeException(msg)
+    protected class PolicyActionException(msg: String) : RuntimeException(msg)
 }
