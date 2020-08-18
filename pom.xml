@@ -12,6 +12,7 @@
         <module>teamcity-kotlin-trigger-server</module>
         <module>teamcity-kotlin-trigger-remote</module>
         <module>build</module>
+        <module>teamcity-kotlin-trigger-openapi</module>
     </modules>
 
     <properties>

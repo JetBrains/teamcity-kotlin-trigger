@@ -2,6 +2,7 @@
 /target/
 /build/target/
 /teamcity-kotlin-trigger-remote/src/compiled/*.jar
+/teamcity-kotlin-trigger-openapi/target/
 /teamcity-kotlin-trigger-common/target/
 /teamcity-kotlin-trigger-remote/target/
 /teamcity-kotlin-trigger-server/target/

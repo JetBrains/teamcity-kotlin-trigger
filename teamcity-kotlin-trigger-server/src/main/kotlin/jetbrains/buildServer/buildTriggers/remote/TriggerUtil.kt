@@ -10,13 +10,20 @@ internal object TriggerUtil {
 
     fun createTriggerBuildContext(context: PolledTriggerContext, timeService: TimeService) = TriggerContext(
         timeService.now(),
-        parseTriggerAdditionalProperties(context.triggerDescriptor.properties) ?: emptyMap(),
+        getCombinedProperties(context.triggerDescriptor.properties) ?: emptyMap(),
         getCustomDataStorageOfTrigger(context).values?.toMutableMap() ?: mutableMapOf(),
         context.buildType.convert()
     )
 
-    fun parseTriggerAdditionalProperties(properties: Map<String, String>): Map<String, String>? {
-        return properties[Constants.ADDITIONAL_PROPERTIES].orEmpty()
+    fun getCombinedProperties(properties: Map<String, String>): Map<String, String>? {
+        val declaredProperties = properties.toMutableMap()
+        val additionalPropertiesStr = declaredProperties.remove(Constants.ADDITIONAL_PROPERTIES)
+
+        return declaredProperties + (parseAdditionalProperties(additionalPropertiesStr) ?: return null)
+    }
+
+    private fun parseAdditionalProperties(additionalProperties: String?): Map<String, String>? {
+        return additionalProperties.orEmpty()
             .lines()
             .map { it.trim() }
             .filterNot { it.isEmpty() }

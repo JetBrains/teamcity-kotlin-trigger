@@ -16,15 +16,9 @@
     </properties>
 
     <dependencies>
-
         <dependency>
             <groupId>com.jetbrains.teamcity.kotlin.trigger</groupId>
-            <artifactId>teamcity-kotlin-trigger-common</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jetbrains.teamcity.kotlin.trigger</groupId>
-            <artifactId>teamcity-kotlin-trigger-remote</artifactId>
+            <artifactId>teamcity-kotlin-trigger-openapi</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
@@ -86,8 +80,8 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>make-assembly</id> <!-- this is used for inheritance merges -->
-                        <phase>package</phase> <!-- bind to the packaging phase -->
+                        <id>make-assembly</id>
+                        <phase>package</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>

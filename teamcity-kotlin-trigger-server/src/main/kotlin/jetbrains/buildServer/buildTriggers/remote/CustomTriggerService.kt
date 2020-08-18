@@ -50,7 +50,7 @@ class CustomTriggerService(
 
     override fun getTriggerPropertiesProcessor() = PropertiesProcessor { properties: Map<String, String> ->
         val triggerPolicy = TriggerUtil.getTargetTriggerPolicyPath(properties)
-        val triggerProperties = TriggerUtil.parseTriggerAdditionalProperties(properties)
+        val triggerProperties = TriggerUtil.getCombinedProperties(properties)
 
         val requiredMap = properties["requiredMap"]
             ?.let { CustomTriggerPropertiesController.deserializeMap(it) }
