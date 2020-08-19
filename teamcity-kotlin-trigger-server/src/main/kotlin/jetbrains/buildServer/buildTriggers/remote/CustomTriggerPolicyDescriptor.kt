@@ -14,5 +14,6 @@ interface CustomTriggerPolicyDescriptor {
     companion object {
         fun policyPathToPolicyName(policyPath: String) = File(policyPath).nameWithoutExtension
         fun policyNameToFileName(policyName: String) = "$policyName.jar"
+        fun policyClassQualifiedName(policyName: String) = "jetbrains.buildServer.buildTriggers.remote.compiled.$policyName"
     }
 }

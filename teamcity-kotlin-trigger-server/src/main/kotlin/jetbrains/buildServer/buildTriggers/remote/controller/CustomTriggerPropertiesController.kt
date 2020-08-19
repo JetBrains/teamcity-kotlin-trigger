@@ -3,6 +3,7 @@ package jetbrains.buildServer.buildTriggers.remote.controller
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import jetbrains.buildServer.buildTriggers.remote.CustomTriggerPolicy
+import jetbrains.buildServer.buildTriggers.remote.CustomTriggerPolicyDescriptor
 import jetbrains.buildServer.buildTriggers.remote.annotation.CustomTriggerProperties
 import jetbrains.buildServer.buildTriggers.remote.annotation.CustomTriggerProperty
 import jetbrains.buildServer.controllers.BaseController
@@ -61,11 +62,12 @@ internal class CustomTriggerPropertiesController(
         val file = File(policyPath)
         val classLoader = URLClassLoader(arrayOf(file.toURI().toURL()), CustomTriggerProperty::class.java.classLoader)
 
-        val policyClassName = "jetbrains.buildServer.buildTriggers.remote.compiled.${file.nameWithoutExtension}"
+        val policyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(policyPath)
+        val policyClassName = CustomTriggerPolicyDescriptor.policyClassQualifiedName(policyName)
 
         return try {
             val klass = Class.forName(policyClassName, false, classLoader)
-            if (CustomTriggerPolicy::class.java.isAssignableFrom(klass))
+            if (!CustomTriggerPolicy::class.java.isAssignableFrom(klass))
                 throw RuntimeException("Cannot display custom trigger's properties: the class of the policy is not an implementation of the ${CustomTriggerPolicy::class.qualifiedName} interface")
             klass
         } catch (e: ClassNotFoundException) {

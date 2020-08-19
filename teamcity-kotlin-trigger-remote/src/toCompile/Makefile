@@ -6,7 +6,7 @@ OUT = ..\compiled
 
 .PHONY: clearUnnecessary
 
-all: ScheduleTriggerPolicy.jar DemandTriggerPolicy.jar ErroneousTriggerPolicy.jar AlternatingTriggerPolicy.jar HangingTriggerPolicy.jar OutOfMemoryTriggerPolicy.jar
+all: ScheduleTriggerPolicy.jar DemandTriggerPolicy.jar ErroneousTriggerPolicy.jar AlternatingTriggerPolicy.jar HangingTriggerPolicy.jar OutOfMemoryTriggerPolicy.jar BadPolicy.jar
 
 %.jar: %.kt $(IMPORTS)
 	$(KC) $^ -d $(OUT)\$@

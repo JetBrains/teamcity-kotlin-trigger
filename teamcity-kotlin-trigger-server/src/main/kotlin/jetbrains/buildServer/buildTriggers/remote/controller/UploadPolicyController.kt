@@ -1,6 +1,8 @@
 package jetbrains.buildServer.buildTriggers.remote.controller
 
 import com.intellij.openapi.diagnostic.Logger
+import jetbrains.buildServer.buildTriggers.remote.CustomTriggerPolicy
+import jetbrains.buildServer.buildTriggers.remote.CustomTriggerPolicyDescriptor
 import jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager
 import jetbrains.buildServer.buildTriggers.remote.findProjectByRequest
 import jetbrains.buildServer.controllers.MultipartFormController
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Controller
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.servlet.ModelAndView
 import java.io.File
+import java.net.URLClassLoader
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
@@ -44,7 +47,7 @@ internal class UploadPolicyController(
             val project = myProjectManager.findProjectByRequest(request, myLogger)
                 ?: throw UploadException("Cannot upload trigger policy: the request did not specify any project id")
 
-            val validatedMultipart = validateMultipart(request, triggerJarName)
+            val validatedMultipart = validateMultipartFileName(request, triggerJarName)
             val policyName = triggerJarName.substringBeforeLast('.')
 
             val localPolicyExists = project.hasLocalPolicy(triggerJarName)
@@ -72,6 +75,14 @@ internal class UploadPolicyController(
             triggerFile.mkdirs()
             validatedMultipart.transferTo(triggerFile)
 
+            try {
+                validatePolicyFile(triggerFile)
+            } catch (e: Throwable) {
+                triggerFile.delete()
+                myCustomTriggersManager.deleteCustomTriggerPolicy(policyName, project)
+                throw e
+            }
+
             myCustomTriggersManager.setTriggerPolicyUpdated(policyName, project, true)
 
             if (!updateMode || !localPolicyExists)
@@ -88,7 +99,7 @@ internal class UploadPolicyController(
     private fun SProject.hasLocalPolicy(fileName: String) =
         myCustomTriggersManager.localCustomTriggers(this).any { it.fileName == fileName }
 
-    private fun validateMultipart(
+    private fun validateMultipartFileName(
         request: HttpServletRequest,
         triggerJarName: String
     ): MultipartFile {
@@ -106,6 +117,23 @@ internal class UploadPolicyController(
 
             else -> triggerJar
         }
+    }
+    
+    private fun validatePolicyFile(policyFile: File) {
+        val parentClassLoader = CustomTriggerPolicy::class.java.classLoader
+        val classLoader = URLClassLoader(arrayOf(policyFile.toURI().toURL()), parentClassLoader)
+
+        val policyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(policyFile.absolutePath)
+        val policyClassName = CustomTriggerPolicyDescriptor.policyClassQualifiedName(policyName)
+
+        val policyClass = try {
+            Class.forName(policyClassName, false, classLoader)
+        } catch (e: ClassNotFoundException) {
+            throw UploadException("Malformed policy archive: cannot find $policyClassName class")
+        }
+
+        if (!CustomTriggerPolicy::class.java.isAssignableFrom(policyClass))
+            throw UploadException("Malformed policy archive: policy class is not an implementation of the ${CustomTriggerPolicy::class.qualifiedName} interface")
     }
 
     private class UploadException(msg: String) : RuntimeException(msg)
