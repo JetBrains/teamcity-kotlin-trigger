@@ -19,14 +19,17 @@ internal class TriggerActions(
         var executorThread: Thread? = null
         val executor = Executors.newSingleThreadExecutor()
 
-        val policyContext = PolicyContextImpl(requestBody.authToken)
+        val authToken = requestBody.authToken
+
+        val restApiClient =
+            if (authToken != null) AuthorizedRestApiClient(authToken)
+            else GuestAuthRestApiClient()
 
         val future = executor.submit<Boolean> {
             executorThread = Thread.currentThread()
 
-            loadTriggerPolicy(triggerPolicyName).run {
-                policyContext.triggerBuild(requestBody.context)
-            }
+            val triggerPolicy = loadTriggerPolicy(triggerPolicyName)
+            triggerPolicy.triggerBuild(requestBody.context, restApiClient)
         }
 
         val answer = try {
@@ -45,7 +48,7 @@ internal class TriggerActions(
 
             throw internalTriggerPolicyError(e.cause!!)
         } finally {
-            policyContext.close()
+            restApiClient.close()
         }
 
         myLogger.info("Trigger $triggerPolicyName is sending response: $answer")

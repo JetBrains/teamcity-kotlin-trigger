@@ -2,6 +2,7 @@ package jetbrains.buildServer.buildTriggers.remote.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import jetbrains.buildServer.buildTriggers.remote.CustomTriggerPolicy
 import jetbrains.buildServer.buildTriggers.remote.annotation.CustomTriggerProperties
 import jetbrains.buildServer.buildTriggers.remote.annotation.CustomTriggerProperty
 import jetbrains.buildServer.controllers.BaseController
@@ -36,31 +37,15 @@ internal class CustomTriggerPropertiesController(
             ?.let { deserializeMap(it) }
             ?: emptyMap()
 
-        val file = File(triggerPolicyPath)
-        val classLoader = URLClassLoader(arrayOf(file.toURI().toURL()), CustomTriggerProperty::class.java.classLoader)
-
-        val policyClassName = "jetbrains.buildServer.buildTriggers.remote.compiled.${file.nameWithoutExtension}"
-
-        val triggerPolicyClass = Class.forName(policyClassName, false, classLoader)
+        val triggerPolicyClass = loadPolicyClass(triggerPolicyPath)
 
         val parameters = mutableMapOf<String, ControlDescription>()
         val requiredMap = mutableMapOf<String, String>()
 
-        fun CustomTriggerProperty.addParameter() {
-            parameters[name] = ParametersUtil.createControlDescription(
-                type.typeName,
-                mapOf(
-                    WellknownParameterArguments.ARGUMENT_DESCRIPTION.name to description,
-                    WellknownParameterArguments.REQUIRED.name to required.toString()
-                )
-            )
-            requiredMap[name] = required.toString()
-        }
-
         triggerPolicyClass.annotations.forEach { annotation ->
-            when(annotation) {
-                is CustomTriggerProperty -> annotation.addParameter()
-                is CustomTriggerProperties -> annotation.properties.forEach { it.addParameter() }
+            when (annotation) {
+                is CustomTriggerProperty -> annotation.addParameterTo(parameters, requiredMap)
+                is CustomTriggerProperties -> annotation.properties.forEach { it.addParameterTo(parameters, requiredMap) }
             }
         }
 
@@ -69,9 +54,37 @@ internal class CustomTriggerPropertiesController(
         mv.model["requiredMap"] = requiredMap
         mv.model["propertiesBean"] = BasePropertiesBean(properties)
 
-        classLoader.close()
-
         return mv
+    }
+
+    private fun loadPolicyClass(policyPath: String): Class<*> {
+        val file = File(policyPath)
+        val classLoader = URLClassLoader(arrayOf(file.toURI().toURL()), CustomTriggerProperty::class.java.classLoader)
+
+        val policyClassName = "jetbrains.buildServer.buildTriggers.remote.compiled.${file.nameWithoutExtension}"
+
+        return try {
+            val klass = Class.forName(policyClassName, false, classLoader)
+            if (CustomTriggerPolicy::class.java.isAssignableFrom(klass))
+                throw RuntimeException("Cannot display custom trigger's properties: the class of the policy is not an implementation of the ${CustomTriggerPolicy::class.qualifiedName} interface")
+            klass
+        } catch (e: ClassNotFoundException) {
+            throw RuntimeException("Cannot display custom trigger's properties: cannot find the class of the policy")
+        }
+    }
+
+    private fun CustomTriggerProperty.addParameterTo(
+        parameters: MutableMap<String, ControlDescription>,
+        requiredMap: MutableMap<String, String>
+    ) {
+        parameters[name] = ParametersUtil.createControlDescription(
+            type.typeName,
+            mapOf(
+                WellknownParameterArguments.ARGUMENT_DESCRIPTION.name to description,
+                WellknownParameterArguments.REQUIRED.name to required.toString()
+            )
+        )
+        requiredMap[name] = required.toString()
     }
 
     companion object {

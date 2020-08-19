@@ -7,7 +7,7 @@ const val DELAY_PROPERTY = "delay"
 
 @CustomTriggerProperty(DELAY_PROPERTY, PropertyType.TEXT, "Scheduling delay", true)
 class ScheduleTriggerPolicy : CustomTriggerPolicy {
-    override fun PolicyContext.triggerBuild(context: TriggerContext): Boolean = with(context) {
+    override fun triggerBuild(context: TriggerContext, restApiClient: RestApiClient): Boolean = with(context) {
         val delay = properties[DELAY_PROPERTY]?.toIntOrNull() ?: -1
         val prevoiusSuccessTime = context.customData["previousSuccessTime"]?.toLongOrNull()
         val answer = when {

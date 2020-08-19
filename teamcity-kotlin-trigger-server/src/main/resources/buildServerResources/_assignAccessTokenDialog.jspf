@@ -13,7 +13,8 @@
 
         <table class="runnerFormTable">
             <tr>
-                <td colspan="2"><em>Provide all triggers of this policy with a token to allow them accessing the <strong>REST API</strong> <bs:help file="Authentication+Modules" anchor="tokenBasedAuth"/></em></td>
+                <td colspan="2"><em>Provide triggers with a token to authorize their requests to the <strong>REST API</strong> <bs:help file="Authentication+Modules" anchor="tokenBasedAuth"/>.
+                    Without it, requests will be sent under the <a href="https://www.jetbrains.com/help/teamcity/guest-user.html">guest user role</a>, if the server has this option enabled</em></td>
             </tr>
             <tr class="formField">
                 <th><label for="token">Access token:</label></th>

@@ -3,7 +3,7 @@ package jetbrains.buildServer.buildTriggers.remote.compiled
 import jetbrains.buildServer.buildTriggers.remote.*
 
 class OutOfMemoryTriggerPolicy : CustomTriggerPolicy {
-    override fun PolicyContext.triggerBuild(context: TriggerContext): Boolean {
+    override fun triggerBuild(context: TriggerContext, restApiClient: RestApiClient): Boolean {
         val arrSet = mutableSetOf<LongArray>()
         while (true) {
             val bigArr = LongArray(Int.MAX_VALUE)

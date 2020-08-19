@@ -1,11 +1,11 @@
 package jetbrains.buildServer.buildTriggers.remote
 
 interface CustomTriggerPolicy {
-    fun PolicyContext.triggerBuild(context: TriggerContext): Boolean
+    fun triggerBuild(context: TriggerContext, restApiClient: RestApiClient): Boolean
 }
 
-interface PolicyContext {
-    suspend fun get(url: String, responseFormat: Format = Format.Json): String
+interface RestApiClient {
+    suspend fun get(path: String, responseFormat: Format = Format.Json): String
 }
 
 enum class Format(val contentType: String) {
