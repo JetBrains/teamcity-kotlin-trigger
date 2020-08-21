@@ -72,6 +72,8 @@ internal class CustomTriggerPropertiesController(
             klass
         } catch (e: ClassNotFoundException) {
             throw RuntimeException("Cannot display custom trigger's properties: cannot find the class of the policy")
+        } finally {
+            classLoader.close()
         }
     }
 

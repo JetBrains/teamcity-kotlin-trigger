@@ -39,13 +39,14 @@
                 <c:set var="hasToken"
                        value="${not empty customTriggersManager.getTriggerPolicyAuthToken(localTrigger.policyName, project)}"/>
                 <td>
-                    <c:if test="${hasToken}">
-                        <span onmouseover="BS.Tooltip.showMessageAtCursor(event, {shift:{x:5,y:10}}, 'This policy has an access token assigned');"
-                              onmouseout="BS.Tooltip.hidePopup();"><bs:buildStatusIcon type="red-sign" className="warningIcon"/></span>
-                    </c:if>
                     <c:out value="${localTrigger.policyName}"/>
                     <c:if test="${not enabled}">
                         <span class="inheritedParam">(disabled)</span>
+                    </c:if>
+                    <c:if test="${hasToken}">
+                        <span class="inheritedParam"
+                              onmouseover="BS.Tooltip.showMessageAtCursor(event, {shift:{x:5,y:10}}, 'This policy has an access token assigned');"
+                              onmouseout="BS.Tooltip.hidePopup();">(authorized)</span>
                     </c:if>
                 </td>
                 <td colspan="${canEditProject ? 1 : 2}">
@@ -142,13 +143,14 @@
                 <td>
                     <c:set var="hasToken"
                            value="${not empty customTriggersManager.getTriggerPolicyAuthToken(inheritedTrigger.policyName, project)}"/>
-                    <c:if test="${hasToken}">
-                        <span onmouseover="BS.Tooltip.showMessageAtCursor(event, {shift:{x:5,y:10}}, 'This policy has an access token assigned');"
-                              onmouseout="BS.Tooltip.hidePopup();"><bs:buildStatusIcon type="red-sign" className="warningIcon"/></span>
-                    </c:if>
                     <c:out value="${inheritedTrigger.policyName}"/>
                     <c:if test="${not enabled}">
                         <span class="inheritedParam">(disabled)</span>
+                    </c:if>
+                    <c:if test="${hasToken}">
+                        <span class="inheritedParam"
+                              onmouseover="BS.Tooltip.showMessageAtCursor(event, {shift:{x:5,y:10}}, 'This policy has an access token assigned');"
+                              onmouseout="BS.Tooltip.hidePopup();">(authorized)</span>
                     </c:if>
                 </td>
                 <td>

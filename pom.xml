@@ -13,8 +13,6 @@
         <module>teamcity-kotlin-trigger-remote</module>
         <module>build</module>
         <module>teamcity-kotlin-trigger-openapi</module>
-<!--        <module>triggers/simple-trigger-with-rest</module>-->
-<!--        <module>triggers/trigger-if-no-builds-within-last-n-days</module>-->
     </modules>
 
     <properties>
