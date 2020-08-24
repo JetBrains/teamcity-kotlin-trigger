@@ -21,24 +21,26 @@ sealed class ServerError(override val message: String) : RuntimeException(messag
     override fun toString() = message
 }
 
-class NoTriggerPolicyNameError internal constructor(message: String) : ServerError(message)
-class ContentTypeMismatchError internal constructor(message: String) : ServerError(message)
-class TriggerPolicyDoesNotExistError internal constructor(message: String) : ServerError(message)
-class TriggerPolicyLoadingError internal constructor(message: String) : ServerError(message)
-class TriggerInvocationTimeoutError internal constructor(message: String) : ServerError(message)
-class InternalTriggerPolicyError internal constructor(message: String) : ServerError(message)
-class InternalServerError internal constructor(message: String) : ServerError(message)
+sealed class WrappingServerError(message: String, override val cause: Throwable): ServerError("$message: $cause")
 
-/* These functions are needed to keep errors' constructors receive error message as the only parameter;
+class NoTriggerPolicyNameError internal constructor(message: String) : ServerError(message)
+class TriggerPolicyDoesNotExistError internal constructor(message: String) : ServerError(message)
+class TriggerInvocationTimeoutError internal constructor(message: String) : ServerError(message)
+
+class ContentTypeMismatchError internal constructor(message: String, cause: Throwable) : WrappingServerError(message, cause)
+class TriggerPolicyLoadingError internal constructor(message: String, cause: Throwable) : WrappingServerError(message, cause)
+class InternalTriggerPolicyError internal constructor(message: String, cause: Throwable) : WrappingServerError(message, cause)
+class InternalServerError internal constructor(message: String, cause: Throwable) : WrappingServerError(message, cause)
+
+/* These functions are needed to keep errors' constructors receive error message as the only String parameter;
     otherwise, deserialization may break due to how Jackson decides what objects to pass to the constructor */
 fun noTriggerPolicyNameError() = NoTriggerPolicyNameError("Trigger policy name not specified in request path")
-fun contentTypeMismatchError(e: Throwable) = ContentTypeMismatchError("Request body expected to be of type: $e")
 fun triggerPolicyDoesNotExistError(triggerName: String) =
     TriggerPolicyDoesNotExistError("Trigger policy '$triggerName' does not exist")
-
-fun triggerPolicyLoadingError(e: Throwable) = TriggerPolicyLoadingError("Exception while loading a trigger policy: $e")
 fun triggerInvocationTimeoutError(triggerName: String) =
     TriggerInvocationTimeoutError("Time limit exceeded on trigger $triggerName invocation")
 
-fun internalTriggerPolicyError(e: Throwable) = InternalTriggerPolicyError("Trigger invocation caused an exception: $e")
-fun internalServerError(e: Throwable) = InternalServerError("Internal server error: $e")
+fun contentTypeMismatchError(e: Throwable) = ContentTypeMismatchError("Request body expected to be of another type", e)
+fun triggerPolicyLoadingError(e: Throwable) = TriggerPolicyLoadingError("Exception while loading a trigger policy", e)
+fun internalTriggerPolicyError(e: Throwable) = InternalTriggerPolicyError("Trigger invocation caused an exception", e)
+fun internalServerError(e: Throwable) = InternalServerError("Internal server error", e)

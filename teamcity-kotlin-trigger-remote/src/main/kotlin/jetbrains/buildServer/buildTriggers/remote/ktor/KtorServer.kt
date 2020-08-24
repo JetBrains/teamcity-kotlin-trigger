@@ -43,6 +43,9 @@ internal class KtorServer(
     private suspend fun <T : Any> HandlingContext.respondWithErrorsHandled(block: suspend () -> T): Unit =
         try {
             call.respond(block())
+        } catch (wse: WrappingServerError) {
+            wse.printStackTrace()
+            call.respond(wse.asResponse())
         } catch (se: ServerError) {
             myLogger.severe(se.message)
             call.respond(se.asResponse())
