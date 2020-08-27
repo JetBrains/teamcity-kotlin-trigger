@@ -118,22 +118,24 @@ internal class UploadPolicyController(
             else -> triggerJar
         }
     }
-    
+
     private fun validatePolicyFile(policyFile: File) {
         val parentClassLoader = CustomTriggerPolicy::class.java.classLoader
-        val classLoader = URLClassLoader(arrayOf(policyFile.toURI().toURL()), parentClassLoader)
+        val urlClassLoader = URLClassLoader(arrayOf(policyFile.toURI().toURL()), parentClassLoader)
 
-        val policyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(policyFile.absolutePath)
-        val policyClassName = CustomTriggerPolicyDescriptor.policyClassQualifiedName(policyName)
+        urlClassLoader.use { classLoader ->
+            val policyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(policyFile.absolutePath)
+            val policyClassName = CustomTriggerPolicyDescriptor.policyClassQualifiedName(policyName)
 
-        val policyClass = try {
-            Class.forName(policyClassName, false, classLoader)
-        } catch (e: ClassNotFoundException) {
-            throw UploadException("Malformed policy archive: cannot find $policyClassName class")
+            val policyClass = try {
+                Class.forName(policyClassName, false, classLoader)
+            } catch (e: ClassNotFoundException) {
+                throw UploadException("Malformed policy archive: cannot find $policyClassName class")
+            }
+
+            if (!CustomTriggerPolicy::class.java.isAssignableFrom(policyClass))
+                throw UploadException("Malformed policy archive: policy class is not an implementation of the ${CustomTriggerPolicy::class.qualifiedName} interface")
         }
-
-        if (!CustomTriggerPolicy::class.java.isAssignableFrom(policyClass))
-            throw UploadException("Malformed policy archive: policy class is not an implementation of the ${CustomTriggerPolicy::class.qualifiedName} interface")
     }
 
     private class UploadException(msg: String) : RuntimeException(msg)

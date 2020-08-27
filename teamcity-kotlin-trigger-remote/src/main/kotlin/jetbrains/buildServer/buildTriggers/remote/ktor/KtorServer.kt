@@ -91,5 +91,5 @@ internal class KtorServer(
 }
 
 fun main() {
-    KtorServer("127.0.0.1", 8080, TriggerPolicyManagerImpl(Path.of("triggers")))
+    KtorServer("127.0.0.1", 8080, TriggerPolicyManagerImpl(Path.of("triggerJars")))
 }

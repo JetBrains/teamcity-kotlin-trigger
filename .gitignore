@@ -6,6 +6,6 @@
 /teamcity-kotlin-trigger-common/target/
 /teamcity-kotlin-trigger-remote/target/
 /teamcity-kotlin-trigger-server/target/
-/simple-trigger-with-rest/target/
+/triggers/*/target/
 *.iml
-/triggers/
+/triggerJars/

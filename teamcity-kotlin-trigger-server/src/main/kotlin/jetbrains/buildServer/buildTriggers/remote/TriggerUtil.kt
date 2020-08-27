@@ -6,6 +6,9 @@ import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.SBuildType
 import jetbrains.buildServer.util.TimeService
 
+private const val RUNNING_BUILD_AMOUNT = 20
+private const val HISTORY_SIZE = 20
+
 internal object TriggerUtil {
 
     fun createTriggerBuildContext(context: PolledTriggerContext, timeService: TimeService) = TriggerContext(
@@ -47,9 +50,11 @@ internal object TriggerUtil {
     private fun SBuildType.convert(): BuildType {
         val project = Project(project.externalId, project.isArchived)
 
-        val history = history.map {
-            FinishedBuild(it.finishDate, it.convert())
-        }
+        val runningBuilds = runningBuilds.take(RUNNING_BUILD_AMOUNT)
+            .map { RunningBuild(it.convert(), it.agentId) }
+
+        val history = history.take(HISTORY_SIZE)
+            .map { FinishedBuild(it.convert(), it.finishDate) }
 
         val lastChangesStartedBuild = lastChangesStartedBuild?.convert()
         val lastChangesSuccessfullyFinished = lastChangesSuccessfullyFinished?.convert()
@@ -60,13 +65,13 @@ internal object TriggerUtil {
             isInQueue,
             isPaused,
             project,
+            runningBuilds,
             history,
             lastChangesStartedBuild,
             lastChangesSuccessfullyFinished,
             lastChangesFinished,
             buildParameters,
-            parameters,
-            tags
+            parameters
         )
     }
 
