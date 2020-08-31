@@ -1,6 +1,7 @@
 package jetbrains.buildServer.buildTriggers.remote.controller.action
 
 import com.intellij.openapi.diagnostic.Logger
+import jetbrains.buildServer.buildTriggers.remote.CustomTriggerPolicyDescriptor
 import jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager
 import jetbrains.buildServer.buildTriggers.remote.controller.PolicyAction
 import jetbrains.buildServer.buildTriggers.remote.findProjectByRequest
@@ -29,18 +30,20 @@ class DisablePolicyAction(
 
     override fun processPost(request: HttpServletRequest, response: HttpServletResponse) {
         val project = myProjectManager.findProjectByRequest(request, myLogger) ?: return
-        val triggerPolicyName = request.getParameter("triggerPolicyName") ?: return
+        val policyName = request.getParameter("triggerPolicyName") ?: return
+        val policyDescriptor = CustomTriggerPolicyDescriptor(policyName, project)
+
 
         val enable = request.getParameter("enable")?.toBoolean() ?: false
-        val triggerPolicyEnabled = myCustomTriggersManager.isTriggerPolicyEnabled(triggerPolicyName, project)
+        val triggerPolicyEnabled = myCustomTriggersManager.isTriggerPolicyEnabled(policyDescriptor)
 
         if (triggerPolicyEnabled == enable) {
             val enabledStatus = if (triggerPolicyEnabled) "enabled" else "disabled"
-            myLogger.debug("Trigger policy '$triggerPolicyName' already $enabledStatus")
+            myLogger.debug("Trigger policy '$policyName' already $enabledStatus")
             return
         }
 
-        myCustomTriggersManager.setTriggerPolicyEnabled(triggerPolicyName, project, enable)
+        myCustomTriggersManager.setTriggerPolicyEnabled(policyDescriptor, enable)
         return
     }
 }

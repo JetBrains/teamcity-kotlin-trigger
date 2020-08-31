@@ -10,32 +10,14 @@ private const val RUNNING_BUILD_AMOUNT = 20
 private const val HISTORY_SIZE = 20
 
 internal object TriggerUtil {
+    const val TRIGGER_POLICY_NAME = "triggerPolicy"
 
     fun createTriggerBuildContext(context: PolledTriggerContext, timeService: TimeService) = TriggerContext(
         timeService.now(),
-        getCombinedProperties(context.triggerDescriptor.properties) ?: emptyMap(),
+        context.triggerDescriptor.properties,
         getCustomDataStorageOfTrigger(context).values?.toMutableMap() ?: mutableMapOf(),
         context.buildType.convert()
     )
-
-    fun getCombinedProperties(properties: Map<String, String>): Map<String, String>? {
-        val declaredProperties = properties.toMutableMap()
-        val additionalPropertiesStr = declaredProperties.remove(Constants.ADDITIONAL_PROPERTIES)
-
-        return declaredProperties + (parseAdditionalProperties(additionalPropertiesStr) ?: return null)
-    }
-
-    private fun parseAdditionalProperties(additionalProperties: String?): Map<String, String>? {
-        return additionalProperties.orEmpty()
-            .lines()
-            .map { it.trim() }
-            .filterNot { it.isEmpty() }
-            .map {
-                val i = it.indexOf("=")
-                if (i <= 0 || i == it.length - 1) return null
-                it.substring(0, i).trim() to it.substring(i + 1).trim()
-            }.toMap()
-    }
 
     fun getCustomDataStorageOfTrigger(context: PolledTriggerContext): CustomDataStorage {
         val triggerServiceId = context.triggerDescriptor.buildTriggerService::class.qualifiedName
@@ -44,8 +26,8 @@ internal object TriggerUtil {
         return context.buildType.getCustomDataStorage(triggerServiceId + "_" + triggerId)
     }
 
-    fun getTargetTriggerPolicyPath(properties: Map<String, String>): String? =
-        properties[Constants.TRIGGER_POLICY_PATH]
+    fun getTargetTriggerPolicyName(properties: Map<String, String>): String? =
+        properties[TRIGGER_POLICY_NAME]
 
     private fun SBuildType.convert(): BuildType {
         val project = Project(project.externalId, project.isArchived)

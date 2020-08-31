@@ -22,7 +22,7 @@ class TriggerWeeklyIfNoBuilds : CustomTriggerPolicy {
         if (!isDesiredDayOfWeek(context)) return false
 
         val dateTooOld = Instant.ofEpochMilli(context.currentTime)
-            .minus(7, ChronoUnit.DAYS) // ChronoUnit.DAYS is unsupported
+            .minus(7, ChronoUnit.DAYS) // ChronoUnit.WEEKS is unsupported
 
         val mostRecentFinishedBuild = buildType.history.firstOrNull()
 

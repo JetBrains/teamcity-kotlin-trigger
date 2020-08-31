@@ -5,8 +5,8 @@
 
 <script>
     BS.TriggerPolicy = {
-        update: function (updatedFileName) {
-            return BS.UploadTriggerDialog.open(updatedFileName);
+        update: function (updatedPolicyName) {
+            return BS.UploadTriggerDialog.open(updatedPolicyName);
         },
 
         setEnabled: function (triggerPolicyName, enable, hasUsages) {

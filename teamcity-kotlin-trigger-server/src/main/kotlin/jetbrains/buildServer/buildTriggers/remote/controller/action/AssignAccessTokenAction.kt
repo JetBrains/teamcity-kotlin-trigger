@@ -1,6 +1,7 @@
 package jetbrains.buildServer.buildTriggers.remote.controller.action
 
 import com.intellij.openapi.diagnostic.Logger
+import jetbrains.buildServer.buildTriggers.remote.CustomTriggerPolicyDescriptor
 import jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager
 import jetbrains.buildServer.buildTriggers.remote.controller.PolicyAction
 import jetbrains.buildServer.buildTriggers.remote.findProjectByRequest
@@ -31,6 +32,7 @@ class AssignAccessTokenAction(
     override fun processPost(request: HttpServletRequest, response: HttpServletResponse) {
         val project = myProjectManager.findProjectByRequest(request, myLogger) ?: return
         val policyName = request.getParameter("policyName") ?: return
+        val policyDescriptor = CustomTriggerPolicyDescriptor(policyName, project)
 
         val encryptedToken = request.getParameter("encryptedToken")
         val token = RSACipher.decryptWebRequestData(encryptedToken)
@@ -38,6 +40,6 @@ class AssignAccessTokenAction(
         if (token?.isNotBlank() != true)
             throw PolicyActionException("Access token cannot be empty")
 
-        myCustomTriggersManager.setTriggerPolicyAuthToken(policyName, project, token)
+        myCustomTriggersManager.setTriggerPolicyAuthToken(policyDescriptor, token)
     }
 }

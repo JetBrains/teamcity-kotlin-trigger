@@ -1,33 +1,31 @@
 package jetbrains.buildServer.buildTriggers.remote
 
-import java.net.URLClassLoader
+import java.io.FileNotFoundException
 import java.nio.file.Path
 
 internal class TriggerPolicyManagerImpl(private val myTriggerPolicyDirPath: Path) : TriggerPolicyManager {
-    private val myTriggerPolicyMap = mutableMapOf<String, CustomTriggerPolicy>()
+    private val myPolicyFileManager = SimpleTriggerPolicyJarManager()
 
-    override fun loadTriggerPolicy(triggerPolicyName: String): CustomTriggerPolicy = myTriggerPolicyMap
-        .computeIfAbsent(triggerPolicyName) {
-            if (!triggerPolicyExists(triggerPolicyName))
-                throw TriggerPolicyDoesNotExistException()
+    override fun <T> loadTriggerPolicy(policyName: String, onLoad: (CustomTriggerPolicy) -> T): T {
+        val policyFilePath = triggerPolicyPath(policyName)
 
-            val urlClassLoader = URLClassLoader(arrayOf(triggerPolicyUrl(triggerPolicyName)))
-            val triggerPolicyClass = Class.forName(triggerPolicyClass(triggerPolicyName), true, urlClassLoader)
-
-            triggerPolicyClass.getDeclaredConstructor().newInstance() as CustomTriggerPolicy
+        return try {
+            myPolicyFileManager.loadPolicyClass(policyFilePath, true) { policyClass ->
+                val policy = policyClass.getDeclaredConstructor().newInstance()
+                onLoad(policy)
+            }
+        } catch (e: FileNotFoundException) {
+            throw TriggerPolicyDoesNotExistException()
         }
-
-    override fun saveTriggerPolicy(triggerPolicyName: String, bytes: ByteArray) {
-        myTriggerPolicyDirPath.toFile().mkdir()
-        triggerPolicyPath(triggerPolicyName)
-            .toFile()
-            .writeBytes(bytes)
-        myTriggerPolicyMap.remove(triggerPolicyName)
     }
 
-    private fun triggerPolicyPath(triggerPolicyName: String) = myTriggerPolicyDirPath.resolve("$triggerPolicyName.jar")
-    private fun triggerPolicyExists(triggerPolicyName: String) = triggerPolicyPath(triggerPolicyName).toFile().exists()
-    private fun triggerPolicyUrl(triggerPolicyName: String) = triggerPolicyPath(triggerPolicyName).toUri().toURL()
-    private fun triggerPolicyClass(triggerPolicyName: String) =
-        "jetbrains.buildServer.buildTriggers.remote.compiled.$triggerPolicyName"
+    override fun saveTriggerPolicy(policyName: String, bytes: ByteArray) {
+        myTriggerPolicyDirPath.toFile().mkdir()
+        triggerPolicyPath(policyName)
+            .toFile()
+            .writeBytes(bytes)
+    }
+
+    private fun triggerPolicyPath(policyName: String) =
+        myTriggerPolicyDirPath.resolve(myPolicyFileManager.createPolicyFileName(policyName))
 }

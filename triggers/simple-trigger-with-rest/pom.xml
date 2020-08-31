@@ -13,6 +13,7 @@
     <properties>
         <kotlin.version>1.3.72</kotlin.version>
         <kotlinx.version>1.3.4</kotlinx.version>
+        <policy.name>SimpleTriggerWithRest</policy.name>
     </properties>
 
     <dependencies>
@@ -86,7 +87,7 @@
                             <goal>single</goal>
                         </goals>
                         <configuration>
-                            <finalName>SimpleTriggerWithRest</finalName>
+                            <finalName>${policy.name}</finalName>
                         </configuration>
                     </execution>
                 </executions>
@@ -103,8 +104,8 @@
                             <goal>rename</goal>
                         </goals>
                         <configuration>
-                            <sourceFile>target/SimpleTriggerWithRest-jar-with-dependencies.jar</sourceFile>
-                            <destinationFile>target/SimpleTriggerWithRest.jar</destinationFile>
+                            <sourceFile>target/${policy.name}-jar-with-dependencies.jar</sourceFile>
+                            <destinationFile>target/${policy.name}.jar</destinationFile>
                         </configuration>
                     </execution>
                 </executions>

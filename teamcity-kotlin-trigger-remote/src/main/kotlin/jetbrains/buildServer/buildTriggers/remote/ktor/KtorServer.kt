@@ -1,22 +1,20 @@
 package jetbrains.buildServer.buildTriggers.remote.ktor
 
-import io.ktor.application.ApplicationCall
-import io.ktor.application.call
-import io.ktor.application.install
-import io.ktor.features.ContentNegotiation
-import io.ktor.jackson.jackson
+import io.ktor.application.*
+import io.ktor.features.*
+import io.ktor.jackson.*
+import io.ktor.request.*
 import io.ktor.request.ContentTransformationException
-import io.ktor.request.receive
-import io.ktor.response.respond
-import io.ktor.routing.Routing
-import io.ktor.routing.route
-import io.ktor.routing.routing
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
-import io.ktor.util.pipeline.PipelineContext
-import jetbrains.buildServer.buildTriggers.remote.*
+import io.ktor.response.*
+import io.ktor.routing.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.util.pipeline.*
+import jetbrains.buildServer.buildTriggers.remote.TriggerPolicyManager
+import jetbrains.buildServer.buildTriggers.remote.TriggerPolicyManagerImpl
 import jetbrains.buildServer.buildTriggers.remote.jackson.TYPE_VALIDATOR
-import java.nio.file.Path
+import jetbrains.buildServer.buildTriggers.remote.net.*
+import java.nio.file.Paths
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -94,5 +92,5 @@ internal class KtorServer(
 }
 
 fun main() {
-    KtorServer("127.0.0.1", 8080, TriggerPolicyManagerImpl(Path.of("triggerJars")))
+    KtorServer("127.0.0.1", 8080, TriggerPolicyManagerImpl(Paths.get("triggerJars")))
 }

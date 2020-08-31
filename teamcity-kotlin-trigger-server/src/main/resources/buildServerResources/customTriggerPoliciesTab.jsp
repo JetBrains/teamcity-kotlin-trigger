@@ -33,11 +33,11 @@
         </tr>
         </thead>
         <c:forEach var="localTrigger" items="${localTriggers}">
-            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(localTrigger.policyName, project)}"/>
+            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(localTrigger)}"/>
             <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
-                <c:set var="usages" value="${customTriggersManager.getUsages(localTrigger.filePath, project)}"/>
+                <c:set var="usages" value="${customTriggersManager.getUsages(localTrigger)}"/>
                 <c:set var="hasToken"
-                       value="${not empty customTriggersManager.getTriggerPolicyAuthToken(localTrigger.policyName, project)}"/>
+                       value="${not empty customTriggersManager.getTriggerPolicyAuthToken(localTrigger)}"/>
                 <td>
                     <c:out value="${localTrigger.policyName}"/>
                     <c:if test="${not enabled}">
@@ -68,7 +68,7 @@
                                       <c:if test="${canEditSubprojects}">
                                           <l:li>
                                             <a href="#"
-                                               onclick="return BS.TriggerPolicy.update(String.raw`${localTrigger.fileName}`)"
+                                               onclick="return BS.TriggerPolicy.update(String.raw`${localTrigger.policyName}`)"
                                                title="Update trigger policy">Update...</a>
                                           </l:li>
                                           <c:choose>
@@ -138,11 +138,11 @@
         </tr>
         </thead>
         <c:forEach var="inheritedTrigger" items="${inheritedTriggers}">
-            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(inheritedTrigger.policyName, project)}"/>
+            <c:set var="enabled" value="${customTriggersManager.isTriggerPolicyEnabled(inheritedTrigger)}"/>
             <tr class="triggerRow" style="${not enabled ? 'color: #999': ''}">
                 <td>
                     <c:set var="hasToken"
-                           value="${not empty customTriggersManager.getTriggerPolicyAuthToken(inheritedTrigger.policyName, project)}"/>
+                           value="${not empty customTriggersManager.getTriggerPolicyAuthToken(inheritedTrigger)}"/>
                     <c:out value="${inheritedTrigger.policyName}"/>
                     <c:if test="${not enabled}">
                         <span class="inheritedParam">(disabled)</span>
@@ -154,7 +154,7 @@
                     </c:if>
                 </td>
                 <td>
-                    <c:set var="usages" value="${customTriggersManager.getUsages(inheritedTrigger.filePath, project)}"/>
+                    <c:set var="usages" value="${customTriggersManager.getUsages(inheritedTrigger)}"/>
                     <c:if test="${empty usages}">
                         No usages
                     </c:if>

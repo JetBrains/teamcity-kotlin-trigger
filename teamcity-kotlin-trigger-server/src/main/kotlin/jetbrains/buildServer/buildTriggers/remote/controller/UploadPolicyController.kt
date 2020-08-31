@@ -1,10 +1,7 @@
 package jetbrains.buildServer.buildTriggers.remote.controller
 
 import com.intellij.openapi.diagnostic.Logger
-import jetbrains.buildServer.buildTriggers.remote.CustomTriggerPolicy
-import jetbrains.buildServer.buildTriggers.remote.CustomTriggerPolicyDescriptor
-import jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager
-import jetbrains.buildServer.buildTriggers.remote.findProjectByRequest
+import jetbrains.buildServer.buildTriggers.remote.*
 import jetbrains.buildServer.controllers.MultipartFormController
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.SProject
@@ -15,7 +12,9 @@ import org.springframework.stereotype.Controller
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.servlet.ModelAndView
 import java.io.File
-import java.net.URLClassLoader
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
@@ -24,6 +23,7 @@ internal class UploadPolicyController(
     private val myProjectManager: ProjectManager,
     private val myPluginDescriptor: PluginDescriptor,
     private val myCustomTriggersManager: CustomTriggersManager,
+    private val myPolicyFileManager: TriggerPolicyFileManager<String>,
     myWebControllerManager: WebControllerManager
 ) : MultipartFormController() {
 
@@ -38,7 +38,11 @@ internal class UploadPolicyController(
         val model = modelAndView.model
         model["jsBase"] = "BS.UploadTriggerDialog"
 
-        val updatedFileName = request.getParameter("updatedFileName")
+        val updatedPolicyName = request.getParameter("updatedPolicyName")
+        val updatedFileName =
+            if (updatedPolicyName?.isNotBlank() == true)
+                myPolicyFileManager.createPolicyFileName(updatedPolicyName)
+            else ""
 
         try {
             val triggerJarName = request.getParameter("fileName")
@@ -48,45 +52,38 @@ internal class UploadPolicyController(
                 ?: throw UploadException("Cannot upload trigger policy: the request did not specify any project id")
 
             val validatedMultipart = validateMultipartFileName(request, triggerJarName)
-            val policyName = triggerJarName.substringBeforeLast('.')
 
-            val localPolicyExists = project.hasLocalPolicy(triggerJarName)
-            val descendant = project.projects.firstOrNull { it.hasLocalPolicy(triggerJarName) }
-            val ancestor = project.projectPath.dropLast(1)
-                .firstOrNull { it.hasLocalPolicy(triggerJarName) }
+            val policyName = myPolicyFileManager.getPolicyName(Paths.get(triggerJarName))
+            val policyDescriptor = CustomTriggerPolicyDescriptor(policyName, project)
 
-            val updateMode = updatedFileName != null && updatedFileName.isNotBlank()
+            validateUsages(project, policyName, updatedFileName, triggerJarName)
 
-            if (updateMode && updatedFileName != triggerJarName)
-                throw UploadException("Uploaded jar's filename doesn't match the updated file's name")
+            var createdPolicy = false
+            val policyPath = myCustomTriggersManager.getTriggerPolicyFilePath(policyDescriptor) ?: run {
+                createdPolicy = true
+                myCustomTriggersManager.createCustomTriggerPolicy(policyDescriptor)
+            }
 
-            if (!updateMode && localPolicyExists)
-                throw UploadException("File is already loaded to this project")
-
-            if (ancestor != null)
-                throw UploadException("File is already loaded to this project's ancestor '${ancestor.fullName}'")
-
-            if (descendant != null)
-                throw UploadException("File is already loaded to this project's descendant '${descendant.fullName}'")
-
-            val policyDescriptor = myCustomTriggersManager.createCustomTriggerPolicy(policyName, project)
-
-            val triggerFile = File(policyDescriptor.filePath)
-            triggerFile.mkdirs()
-            validatedMultipart.transferTo(triggerFile)
+            val fileName = myPolicyFileManager.createPolicyFileName(policyName)
+            val tmpTriggerFile = Paths.get(policyPath).parent.resolve("tmp").resolve(fileName).toFile()
+            tmpTriggerFile.mkdirs()
+            validatedMultipart.transferTo(tmpTriggerFile)
 
             try {
-                validatePolicyFile(triggerFile)
+                validatePolicyFile(tmpTriggerFile)
             } catch (e: Throwable) {
-                triggerFile.delete()
-                myCustomTriggersManager.deleteCustomTriggerPolicy(policyName, project)
+                tmpTriggerFile.delete()
+                if (createdPolicy)
+                    myCustomTriggersManager.deleteCustomTriggerPolicy(policyDescriptor)
                 throw e
             }
 
-            myCustomTriggersManager.setTriggerPolicyUpdated(policyName, project, true)
+            Files.move(tmpTriggerFile.toPath(), Paths.get(policyPath), StandardCopyOption.REPLACE_EXISTING)
 
-            if (!updateMode || !localPolicyExists)
-                myCustomTriggersManager.setTriggerPolicyEnabled(policyName, project, true)
+            myCustomTriggersManager.setTriggerPolicyUpdated(policyDescriptor, true)
+            if (!createdPolicy)
+                myCustomTriggersManager.setTriggerPolicyEnabled(policyDescriptor, true)
+
         } catch (e: Exception) {
             myLogger.warnAndDebugDetails("Failed to upload a trigger policy", e)
             model["error"] = e.message
@@ -96,8 +93,8 @@ internal class UploadPolicyController(
         return modelAndView
     }
 
-    private fun SProject.hasLocalPolicy(fileName: String) =
-        myCustomTriggersManager.localCustomTriggers(this).any { it.fileName == fileName }
+    private fun SProject.hasLocalPolicy(policyName: String) =
+        myCustomTriggersManager.localCustomTriggers(this).any { it.policyName == policyName }
 
     private fun validateMultipartFileName(
         request: HttpServletRequest,
@@ -119,22 +116,39 @@ internal class UploadPolicyController(
         }
     }
 
+    private fun validateUsages(
+        project: SProject,
+        policyName: String,
+        updatedFileName: String,
+        loadedFileName: String
+    ) {
+        val localPolicyExists = project.hasLocalPolicy(policyName)
+        val descendant = project.projects.firstOrNull { it.hasLocalPolicy(policyName) }
+        val ancestor = project.projectPath.dropLast(1)
+            .firstOrNull { it.hasLocalPolicy(policyName) }
+
+        val updateMode = updatedFileName.isNotBlank()
+
+        if (updateMode && updatedFileName != loadedFileName)
+            throw UploadException("Uploaded jar's filename doesn't match the updated file's name")
+
+        if (!updateMode && localPolicyExists)
+            throw UploadException("File is already loaded to this project")
+
+        if (ancestor != null)
+            throw UploadException("File is already loaded to this project's ancestor '${ancestor.fullName}'")
+
+        if (descendant != null)
+            throw UploadException("File is already loaded to this project's descendant '${descendant.fullName}'")
+    }
+
     private fun validatePolicyFile(policyFile: File) {
-        val parentClassLoader = CustomTriggerPolicy::class.java.classLoader
-        val urlClassLoader = URLClassLoader(arrayOf(policyFile.toURI().toURL()), parentClassLoader)
-
-        urlClassLoader.use { classLoader ->
-            val policyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(policyFile.absolutePath)
-            val policyClassName = CustomTriggerPolicyDescriptor.policyClassQualifiedName(policyName)
-
-            val policyClass = try {
-                Class.forName(policyClassName, false, classLoader)
-            } catch (e: ClassNotFoundException) {
-                throw UploadException("Malformed policy archive: cannot find $policyClassName class")
-            }
-
-            if (!CustomTriggerPolicy::class.java.isAssignableFrom(policyClass))
-                throw UploadException("Malformed policy archive: policy class is not an implementation of the ${CustomTriggerPolicy::class.qualifiedName} interface")
+        try {
+            myPolicyFileManager.loadPolicyClass(policyFile.toPath(), false, {})
+        } catch (e: ClassNotFoundException) {
+            throw UploadException("Malformed policy archive: cannot find policy class")
+        } catch (e: ClassCastException) {
+            throw UploadException("Malformed policy archive: policy class is not an implementation of the ${CustomTriggerPolicy::class.qualifiedName} interface")
         }
     }
 

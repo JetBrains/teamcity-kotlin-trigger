@@ -1,4 +1,4 @@
-package jetbrains.buildServer.buildTriggers.remote
+package jetbrains.buildServer.buildTriggers.remote.net
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo

@@ -4,6 +4,10 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.buildTriggers.PolledTriggerContext
 import jetbrains.buildServer.buildTriggers.async.BaseAsyncPolledBuildTrigger
 import jetbrains.buildServer.buildTriggers.remote.ktor.KtorClient
+import jetbrains.buildServer.buildTriggers.remote.net.ServerError
+import jetbrains.buildServer.buildTriggers.remote.net.TriggerBuildRequestBody
+import jetbrains.buildServer.buildTriggers.remote.net.TriggerPolicyBody
+import jetbrains.buildServer.buildTriggers.remote.net.TriggerPolicyDoesNotExistError
 import jetbrains.buildServer.util.TimeService
 import java.io.File
 
@@ -30,33 +34,34 @@ class RemoteTriggerPolicy(
     }
 
     override fun triggerBuild(prev: String?, context: PolledTriggerContext): String? {
-        val triggerPolicyPath = TriggerUtil.getTargetTriggerPolicyPath(context.triggerDescriptor.properties)
-            ?: run {
-                myLogger.debug("Trigger policy not specified, triggerBuild() invocation skipped")
-                return null
-            }
+        val policyName = TriggerUtil.getTargetTriggerPolicyName(context.triggerDescriptor.properties) ?: run {
+            myLogger.debug("Trigger policy not specified, triggerBuild() invocation skipped")
+            return null
+        }
+        val policyDescriptor = CustomTriggerPolicyDescriptor(policyName, context.buildType.project)
+        val policyPath = myCustomTriggersManager.getTriggerPolicyFilePath(policyDescriptor) ?: run {
+            throw RuntimeException("Policy does not exist")
+        }
 
-        val policyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
-        val project = context.buildType.project
-        if (!myCustomTriggersManager.isTriggerPolicyEnabled(policyName, project))
+        if (!myCustomTriggersManager.isTriggerPolicyEnabled(policyDescriptor))
             return null
 
-        if (myCustomTriggersManager.isTriggerPolicyUpdated(policyName, project)) {
-            val triggerPolicyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
-            myLogger.debug("Trigger policy '$triggerPolicyName' was updated and will be uploaded")
-            uploadTriggerPolicy(triggerPolicyPath) {
-                myCustomTriggersManager.setTriggerPolicyUpdated(policyName, project, false)
-                doTriggerBuild(triggerPolicyPath, context, true)
+        if (myCustomTriggersManager.isTriggerPolicyUpdated(policyDescriptor)) {
+            myLogger.debug("Trigger policy '$policyName' was updated and will be uploaded")
+            uploadTriggerPolicy(policyPath, policyName) {
+                myCustomTriggersManager.setTriggerPolicyUpdated(policyDescriptor, false)
+                doTriggerBuild(policyPath, policyName, context, true)
             }
         } else {
-            doTriggerBuild(triggerPolicyPath, context, true)
+            doTriggerBuild(policyPath, policyName, context, true)
         }
 
         return null
     }
 
     private fun doTriggerBuild(
-        triggerPolicyPath: String,
+        policyPath: String,
+        policyName: String,
         context: PolledTriggerContext,
         shouldTryUpload: Boolean = true
     ) {
@@ -64,31 +69,30 @@ class RemoteTriggerPolicy(
             myLogger.debug("TriggerBuild action initialized a new connection")
         }
 
-        val triggerPolicyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
-
+        val policyDescriptor = CustomTriggerPolicyDescriptor(policyName, context.buildType.project)
         val triggerBuildContext = TriggerUtil.createTriggerBuildContext(context, myTimeService)
-        val authToken = myCustomTriggersManager.getTriggerPolicyAuthToken(triggerPolicyName, context.buildType.project)
+        val authToken = myCustomTriggersManager.getTriggerPolicyAuthToken(policyDescriptor)
 
         val triggerBuildRequestBody = TriggerBuildRequestBody(triggerBuildContext, authToken)
 
         val triggerBuildResponse = try {
-            client.sendTriggerBuild(triggerPolicyName, triggerBuildRequestBody)
+            client.sendTriggerBuild(policyName, triggerBuildRequestBody)
         } catch (e: TriggerPolicyDoesNotExistError) {
             myLogger.warn(e.message)
             if (shouldTryUpload) {
                 myLogger.debug("TriggerBuild action failed and invoked UploadTrigger")
-                uploadTriggerPolicy(triggerPolicyPath) {
+                uploadTriggerPolicy(policyPath, policyName) {
                     myLogger.debug("UploadTrigger action succeeded and invoked TriggerBuild")
-                    doTriggerBuild(triggerPolicyPath, context, false)
+                    doTriggerBuild(policyPath, policyName, context, false)
                 }
-            } else myLogger.error("Trigger policy '$triggerPolicyName' won't be uploaded, TriggerBuild invocation skipped")
+            } else myLogger.error("Trigger policy '$policyName' won't be uploaded, TriggerBuild invocation skipped")
 
             return
         } catch (se: ServerError) {
-            myLogger.error("Failed to call TriggerBuild on trigger policy '$triggerPolicyName', server responded with an error: $se")
+            myLogger.error("Failed to call TriggerBuild on trigger policy '$policyName', server responded with an error: $se")
             return
         } catch (e: Throwable) {
-            myLogger.error("Failed to call TriggerBuild on trigger policy '$triggerPolicyName'", e)
+            myLogger.error("Failed to call TriggerBuild on trigger policy '$policyName'", e)
             return
         }
 
@@ -96,29 +100,27 @@ class RemoteTriggerPolicy(
             .putValues(triggerBuildResponse.customData)
 
         if (triggerBuildResponse.answer)
-            context.buildType.addToQueue(triggerPolicyName)
+            context.buildType.addToQueue(policyName)
     }
 
-    private fun uploadTriggerPolicy(triggerPolicyPath: String, onSuccess: () -> Unit = {}) {
+    private fun uploadTriggerPolicy(policyPath: String, policyName: String, onSuccess: () -> Unit = {}) {
         val client = createClientIfNeeded {
             myLogger.debug("UploadTrigger action initialized a new connection")
         }
 
-        val triggerPolicyBytes = File(triggerPolicyPath).readBytes()
-        val triggerPolicyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
-
+        val triggerPolicyBytes = File(policyPath).readBytes()
         if (triggerPolicyBytes.isEmpty()) {
-            myLogger.error("Failed to upload trigger policy '$triggerPolicyName': it's file is absent")
+            myLogger.error("Failed to upload trigger policy '$policyName': it's file is absent")
             return
         }
 
         try {
-            client.uploadTriggerPolicy(triggerPolicyName, TriggerPolicyBody(triggerPolicyBytes))
+            client.uploadTriggerPolicy(policyName, TriggerPolicyBody(triggerPolicyBytes))
         } catch (se: ServerError) {
-            myLogger.error("Failed to upload trigger policy '$triggerPolicyName', server responded with an error: $se")
+            myLogger.error("Failed to upload trigger policy '$policyName', server responded with an error: $se")
             return
         } catch (e: Throwable) {
-            myLogger.error("Failed to upload trigger policy '$triggerPolicyName' due to an exception", e)
+            myLogger.error("Failed to upload trigger policy '$policyName' due to an exception", e)
             return
         }
         onSuccess()

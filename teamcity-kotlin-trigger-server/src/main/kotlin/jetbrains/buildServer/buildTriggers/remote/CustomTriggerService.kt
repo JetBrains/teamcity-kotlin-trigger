@@ -33,24 +33,23 @@ class CustomTriggerService(
 
     override fun describeTrigger(buildTriggerDescriptor: BuildTriggerDescriptor): String {
         val properties = buildTriggerDescriptor.properties
-        val triggerPolicyPath = TriggerUtil.getTargetTriggerPolicyPath(properties)
+        val policyName = TriggerUtil.getTargetTriggerPolicyName(properties)
             ?: return "Trigger policy is not selected"
-
-        val policyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(triggerPolicyPath)
 
         val projectId = buildTriggerDescriptor.properties["projectId"] ?: return "Project id cannot be determined"
         val project = myProjectManager.findProjectByExternalId(projectId) ?: return "Project cannot be determined"
 
+        val policyDescriptor = CustomTriggerPolicyDescriptor(policyName, project)
+
         val disabledStatus =
-            if (myCustomTriggersManager.isTriggerPolicyEnabled(policyName, project)) ""
+            if (myCustomTriggersManager.isTriggerPolicyEnabled(policyDescriptor)) ""
             else "(disabled)"
 
         return "Uses $policyName $disabledStatus"
     }
 
     override fun getTriggerPropertiesProcessor() = PropertiesProcessor { properties: Map<String, String> ->
-        val triggerPolicy = TriggerUtil.getTargetTriggerPolicyPath(properties)
-        val triggerProperties = TriggerUtil.getCombinedProperties(properties)
+        val policyName = TriggerUtil.getTargetTriggerPolicyName(properties)
 
         val requiredMap = properties["requiredMap"]
             ?.let { CustomTriggerPropertiesController.deserializeMap(it) }
@@ -60,11 +59,8 @@ class CustomTriggerService(
 
         fun addInvalidProperty(s1: String, s2: String) = errors.add(InvalidProperty(s1, s2))
 
-        if (triggerPolicy.isNullOrBlank())
-            addInvalidProperty(Constants.TRIGGER_POLICY_PATH, "A trigger policy should be specified")
-
-        if (triggerProperties == null)
-            addInvalidProperty(Constants.ADDITIONAL_PROPERTIES, "Properties should be 'key=value' pairs on separate lines")
+        if (policyName.isNullOrBlank())
+            addInvalidProperty(TriggerUtil.TRIGGER_POLICY_NAME, "A trigger policy should be specified")
 
         for ((propertyName, requiredStr) in requiredMap) {
             if (StringUtil.isTrue(requiredStr) && properties[propertyName].isNullOrEmpty()) {

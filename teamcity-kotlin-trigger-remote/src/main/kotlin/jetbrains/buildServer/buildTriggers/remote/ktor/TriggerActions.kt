@@ -1,6 +1,7 @@
 package jetbrains.buildServer.buildTriggers.remote.ktor
 
 import jetbrains.buildServer.buildTriggers.remote.*
+import jetbrains.buildServer.buildTriggers.remote.net.*
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -28,8 +29,9 @@ internal class TriggerActions(
         val future = executor.submit<Boolean> {
             executorThread = Thread.currentThread()
 
-            val triggerPolicy = loadTriggerPolicy(triggerPolicyName)
-            triggerPolicy.triggerBuild(requestBody.context, restApiClient)
+            loadTriggerPolicy(triggerPolicyName) { triggerPolicy ->
+                triggerPolicy.triggerBuild(requestBody.context, restApiClient)
+            }
         }
 
         val answer = try {
@@ -61,9 +63,9 @@ internal class TriggerActions(
         return OkayResponse
     }
 
-    private fun loadTriggerPolicy(triggerPolicyName: String): CustomTriggerPolicy =
+    private fun <T> loadTriggerPolicy(triggerPolicyName: String, onLoad: (CustomTriggerPolicy) -> T): T =
         try {
-            myTriggerPolicyManager.loadTriggerPolicy(triggerPolicyName)
+            myTriggerPolicyManager.loadTriggerPolicy(triggerPolicyName, onLoad)
         } catch (e: TriggerPolicyDoesNotExistException) {
             throw triggerPolicyDoesNotExistError(triggerPolicyName)
         } catch (e: Throwable) {

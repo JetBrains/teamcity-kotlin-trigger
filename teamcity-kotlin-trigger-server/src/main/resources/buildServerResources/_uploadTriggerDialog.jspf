@@ -6,7 +6,7 @@
     <forms:multipartForm id="uploadTriggerForm" targetIframe="hidden-iframe">
         <input type="hidden" id="fileName" name="fileName" value="" class="mediumField"/>
         <input type="hidden" id="projectId" name="projectId" value="${project.externalId}"/>
-        <input type="hidden" id="updatedFileName" name="updatedFileName" value=""/>
+        <input type="hidden" id="updatedPolicyName" name="updatedPolicyName" value=""/>
 
         <table class="runnerFormTable">
             <tr>
@@ -48,8 +48,8 @@
             return $j('#uploadingProgress');
         },
 
-        open: function (updatedFile) {
-            $j('#updatedFileName').val(updatedFile)
+        open: function (updatedPolicyName) {
+            $j('#updatedPolicyName').val(updatedPolicyName)
             this.show();
             return false;
         }

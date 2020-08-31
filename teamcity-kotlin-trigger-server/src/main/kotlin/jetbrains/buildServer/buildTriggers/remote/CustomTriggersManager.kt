@@ -5,66 +5,82 @@ import jetbrains.buildServer.serverSide.*
 import jetbrains.buildServer.serverSide.crypt.EncryptUtil
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 import org.springframework.stereotype.Component
-import java.io.File
 
 private val myFeaturePrefix = CustomTriggersManager::class.qualifiedName!! + "_"
 
 @Component
-class CustomTriggersManager(myPluginDescriptor: PluginDescriptor, private val myProjectManager: ProjectManager) {
+class CustomTriggersManager(
+    myPluginDescriptor: PluginDescriptor,
+    private val myProjectManager: ProjectManager,
+    private val myPolicyFileManager: TriggerPolicyFileManager<String>
+) {
     private val myLogger = Logger.getInstance(CustomTriggersManager::class.qualifiedName)
 
     private val myPluginName = myPluginDescriptor.pluginName
     private val myTriggerPolicyUpdatedMap = mutableMapOf<String, Boolean>()
+
+    private val myPolicyPathParam = "policyPath"
     private val myPolicyEnabledParam = "enabled"
     private val myPolicyAuthTokenParam = "authToken"
 
-    fun createCustomTriggerPolicy(policyName: String, project: SProject): CustomTriggerPolicyDescriptor {
+    fun createCustomTriggerPolicy(policyDescriptor: CustomTriggerPolicyDescriptor): String {
+        val (policyName, project) = policyDescriptor
+        policyDescriptor.getOrCreatePolicyFeature()
+
         val policyPath = project.getPathOfOwnPolicy(policyName)
-        val triggerPolicyDescriptor = CustomTriggerPolicyDescriptorImpl(File(policyPath), project)
+        policyDescriptor.updatePolicyFeature(myPolicyPathParam to policyPath)
 
-        project.getPolicyFeature(policyName) ?: project.createPolicyFeature(policyName)
-
-        return triggerPolicyDescriptor
+        return policyPath
     }
 
-    fun deleteCustomTriggerPolicy(policyName: String, project: SProject): String? {
-        val policyPath = project.getPathOfPolicy(policyName) ?: run {
-            myLogger.debug(project.policyDoesNotExistMessage(policyName))
-            return null
-        }
-
-        if (getUsages(policyPath, project).isNotEmpty()) {
+    fun deleteCustomTriggerPolicy(policyDescriptor: CustomTriggerPolicyDescriptor): String? {
+        val (policyName, project) = policyDescriptor
+        if (getUsages(policyDescriptor).isNotEmpty()) {
             myLogger.debug("Policy '$policyName' of project '${project.externalId}' still has usages and cannot be deleted")
             return null
         }
 
-        project.removePolicyFeature(policyName)
+        val policyPath = getTriggerPolicyFilePath(policyDescriptor) ?: run {
+            myLogger.debug(policyDescriptor.policyDoesNotExistMessage())
+            return null
+        }
+        policyDescriptor.removePolicyFeature()
         return policyPath
     }
 
-    fun getTriggerPolicyAuthToken(policyName: String, project: SProject): String? {
-        val tokenFeature = project.getPolicyFeature(policyName) ?: return null
+    /** @return the unique path of the trigger policy, or null if the policy does not exist */
+    fun getTriggerPolicyFilePath(policyDescriptor: CustomTriggerPolicyDescriptor): String? {
+        val policyFeature = policyDescriptor.getPolicyFeature() ?: run {
+            myLogger.debug(policyDescriptor.policyDoesNotExistMessage())
+            return null
+        }
+
+        return policyFeature.parameters[myPolicyPathParam]
+            ?: throw IllegalStateException("Each policy must have a path assigned")
+    }
+
+    fun getTriggerPolicyAuthToken(policyDescriptor: CustomTriggerPolicyDescriptor): String? {
+        val tokenFeature = policyDescriptor.getPolicyFeature() ?: return null
         val token = tokenFeature.parameters[myPolicyAuthTokenParam]
         if (token.isNullOrEmpty()) return null
 
         return EncryptUtil.unscramble(token)
     }
 
-    fun setTriggerPolicyAuthToken(policyName: String, project: SProject, newToken: String) {
+    fun setTriggerPolicyAuthToken(policyDescriptor: CustomTriggerPolicyDescriptor, newToken: String) {
         val token =
             if (newToken.isBlank()) ""
             else EncryptUtil.scramble(newToken)
 
-        project.updatePolicyFeature(policyName, myPolicyAuthTokenParam to token)
+        policyDescriptor.updatePolicyFeature(myPolicyAuthTokenParam to token)
     }
 
-    fun deleteTriggerPolicyAuthToken(policyName: String, project: SProject) =
-        setTriggerPolicyAuthToken(policyName, project, "")
+    fun deleteTriggerPolicyAuthToken(policyDescriptor: CustomTriggerPolicyDescriptor) =
+        setTriggerPolicyAuthToken(policyDescriptor, "")
 
-    fun isTriggerPolicyEnabled(policyName: String, project: SProject): Boolean {
-        val definingProject = project.getAncestorDefiningPolicy(policyName)
-        val policyFeature = definingProject?.getPolicyFeature(policyName) ?: run {
-            myLogger.debug(project.policyDoesNotExistMessage(policyName))
+    fun isTriggerPolicyEnabled(policyDescriptor: CustomTriggerPolicyDescriptor): Boolean {
+        val policyFeature = policyDescriptor.getPolicyFeature() ?: run {
+            myLogger.debug(policyDescriptor.policyDoesNotExistMessage())
             return false
         }
 
@@ -74,25 +90,21 @@ class CustomTriggersManager(myPluginDescriptor: PluginDescriptor, private val my
             ?: true
     }
 
-    fun setTriggerPolicyEnabled(policyName: String, project: SProject, enabled: Boolean) {
-        val definingProject = project.getAncestorDefiningPolicy(policyName) ?: run {
-            myLogger.debug(project.policyDoesNotExistMessage(policyName))
-            return
-        }
-        definingProject.updatePolicyFeature(policyName, myPolicyEnabledParam to enabled.toString())
+    fun setTriggerPolicyEnabled(policyDescriptor: CustomTriggerPolicyDescriptor, enabled: Boolean) {
+        policyDescriptor.updatePolicyFeature(myPolicyEnabledParam to enabled.toString())
     }
 
-    fun isTriggerPolicyUpdated(policyName: String, project: SProject): Boolean {
-        val policyPath = project.getPathOfPolicy(policyName) ?: run {
-            myLogger.debug(project.policyDoesNotExistMessage(policyName))
+    fun isTriggerPolicyUpdated(policyDescriptor: CustomTriggerPolicyDescriptor): Boolean {
+        val policyPath = getTriggerPolicyFilePath(policyDescriptor) ?: run {
+            myLogger.debug(policyDescriptor.policyDoesNotExistMessage())
             return false
         }
         return myTriggerPolicyUpdatedMap.computeIfAbsent(policyPath) { true }
     }
 
-    fun setTriggerPolicyUpdated(policyName: String, project: SProject, updated: Boolean) {
-        val policyPath = project.getPathOfPolicy(policyName) ?: run {
-            myLogger.debug(project.policyDoesNotExistMessage(policyName))
+    fun setTriggerPolicyUpdated(policyDescriptor: CustomTriggerPolicyDescriptor, updated: Boolean) {
+        val policyPath = getTriggerPolicyFilePath(policyDescriptor) ?: run {
+            myLogger.debug(policyDescriptor.policyDoesNotExistMessage())
             return
         }
         myTriggerPolicyUpdatedMap[policyPath] = updated
@@ -109,13 +121,15 @@ class CustomTriggersManager(myPluginDescriptor: PluginDescriptor, private val my
             ?.let { allUsableCustomTriggers(it) }
             ?: emptyList()
 
-    fun getUsages(triggerPolicyPath: String, project: SProject): List<BuildTypeIdentity> {
+    fun getUsages(policyDescriptor: CustomTriggerPolicyDescriptor): List<BuildTypeIdentity> {
+        val (policyName, project) = policyDescriptor
+
         val filteredBuildTypes = project.buildTypes.asSequence()
-            .filter { it.hasUsagesOf(triggerPolicyPath) }
+            .filter { it.hasUsagesOf(policyName) }
             .asSequence<BuildTypeIdentity>()
 
         val filteredTemplates = project.buildTypeTemplates.asSequence()
-            .filter { it.hasUsagesOf(triggerPolicyPath) }
+            .filter { it.hasUsagesOf(policyName) }
 
         return (filteredBuildTypes + filteredTemplates).toList()
     }
@@ -127,59 +141,45 @@ class CustomTriggersManager(myPluginDescriptor: PluginDescriptor, private val my
                     ?.to(feature)
             }
             .map { (definingProject, feature) ->
-                val policyPath = definingProject.getPathOfOwnPolicy(feature.policyName)
-                CustomTriggerPolicyDescriptorImpl(File(policyPath), definingProject)
+                CustomTriggerPolicyDescriptor(feature.policyName, definingProject)
             }
-
-    private fun SProject.getAncestorDefiningPolicy(policyName: String): SProject? {
-        val projectInternalId = getPolicyFeature(policyName)?.projectId ?: return null
-        return myProjectManager.findProjectById(projectInternalId)
-    }
 
     private fun SProject.getPathOfOwnPolicy(policyName: String): String =
         getPluginDataDirectory(myPluginName)
-            .resolve(CustomTriggerPolicyDescriptor.policyNameToFileName(policyName))
+            .resolve(myPolicyFileManager.createPolicyFileName(policyName))
             .absolutePath
 
-    private fun SProject.getPathOfPolicy(policyName: String): String? =
-        getAncestorDefiningPolicy(policyName)?.getPathOfOwnPolicy(policyName)
-
-    private fun SProject.policyDoesNotExistMessage(policyName: String) =
-        "Policy '$policyName' does not exist in project '${externalId}' or its ancestors"
+    private fun CustomTriggerPolicyDescriptor.policyDoesNotExistMessage() =
+        "Policy '$policyName' does not exist in project '${project.externalId}' or its ancestors"
 }
 
 private val SProjectFeatureDescriptor.isPolicyFeature: Boolean get() = type.startsWith(myFeaturePrefix)
 private val SProjectFeatureDescriptor.policyName: String get() = type.substring(myFeaturePrefix.length)
 
-private fun SProject.createPolicyFeature(policyName: String) = addFeature(myFeaturePrefix + policyName, emptyMap())
-    .also { persist() }
+private fun CustomTriggerPolicyDescriptor.getOrCreatePolicyFeature() =
+    getPolicyFeature()
+        ?: project
+            .addFeature(myFeaturePrefix + policyName, emptyMap())
+            .also { project.persist() }
 
-private fun SProject.getPolicyFeature(policyName: String): SProjectFeatureDescriptor? =
-    getAvailableFeaturesOfType(myFeaturePrefix + policyName).firstOrNull()
+private fun CustomTriggerPolicyDescriptor.getPolicyFeature(): SProjectFeatureDescriptor? =
+    project.getAvailableFeaturesOfType(myFeaturePrefix + policyName).firstOrNull()
 
-private fun SProject.updatePolicyFeature(policyName: String, vararg entries: Pair<String, String>) {
-    val feature = getPolicyFeature(policyName) ?: return
+private fun CustomTriggerPolicyDescriptor.updatePolicyFeature(vararg entries: Pair<String, String>) {
+    val feature = getPolicyFeature() ?: return
 
     val params = feature.parameters.toMutableMap()
     params.putAll(entries)
-    updateFeature(feature.id, feature.type, params)
-    persist()
+    project.updateFeature(feature.id, feature.type, params)
+    project.persist()
 }
 
-private fun SProject.removePolicyFeature(policyName: String) {
-    val feature = getPolicyFeature(policyName) ?: return
-    removeFeature(feature.id)
-    persist()
+private fun CustomTriggerPolicyDescriptor.removePolicyFeature() {
+    val feature = getPolicyFeature() ?: return
+    project.removeFeature(feature.id)
+    project.persist()
 }
 
-private fun BuildTypeSettings.hasUsagesOf(triggerPolicyPath: String) = buildTriggersCollection.asSequence()
+private fun BuildTypeSettings.hasUsagesOf(triggerPolicyName: String) = buildTriggersCollection.asSequence()
     .filter { it.buildTriggerService is CustomTriggerService }
-    .any { it.properties[Constants.TRIGGER_POLICY_PATH] == triggerPolicyPath }
-
-private class CustomTriggerPolicyDescriptorImpl(file: File, override val project: SProject) :
-    CustomTriggerPolicyDescriptor {
-
-    override val fileName: String = file.name
-    override val filePath: String = file.absolutePath
-    override val policyName = CustomTriggerPolicyDescriptor.policyPathToPolicyName(filePath)
-}
+    .any { TriggerUtil.getTargetTriggerPolicyName(it.properties) == triggerPolicyName }

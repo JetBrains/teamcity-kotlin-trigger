@@ -1,6 +1,7 @@
 package jetbrains.buildServer.buildTriggers.remote.controller.action
 
 import com.intellij.openapi.diagnostic.Logger
+import jetbrains.buildServer.buildTriggers.remote.CustomTriggerPolicyDescriptor
 import jetbrains.buildServer.buildTriggers.remote.CustomTriggersManager
 import jetbrains.buildServer.buildTriggers.remote.controller.PolicyAction
 import jetbrains.buildServer.buildTriggers.remote.findProjectByRequest
@@ -29,7 +30,8 @@ class RemoveAccessTokenAction(
     override fun processPost(request: HttpServletRequest, response: HttpServletResponse) {
         val project = myProjectManager.findProjectByRequest(request, myLogger) ?: return
         val policyName = request.getParameter("policyName") ?: return
+        val policyDescriptor = CustomTriggerPolicyDescriptor(policyName, project)
 
-        myCustomTriggersManager.deleteTriggerPolicyAuthToken(policyName, project)
+        myCustomTriggersManager.deleteTriggerPolicyAuthToken(policyDescriptor)
     }
 }

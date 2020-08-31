@@ -10,7 +10,7 @@ annotation class CustomTriggerProperties(vararg val properties: CustomTriggerPro
 annotation class CustomTriggerProperty(
     val name: String,
     val type: PropertyType,
-    val description: String = "",
+    val description: String,
     val required: Boolean = false
 )
 

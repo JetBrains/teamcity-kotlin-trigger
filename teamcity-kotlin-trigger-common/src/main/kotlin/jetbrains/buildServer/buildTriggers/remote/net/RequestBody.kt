@@ -1,4 +1,6 @@
-package jetbrains.buildServer.buildTriggers.remote
+package jetbrains.buildServer.buildTriggers.remote.net
+
+import jetbrains.buildServer.buildTriggers.remote.TriggerContext
 
 sealed class RequestBody
 
