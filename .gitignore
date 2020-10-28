@@ -1,4 +1,5 @@
 /.idea/
+!/.idea/copyright
 /target/
 /build/target/
 /teamcity-kotlin-trigger-remote/src/compiled/*.jar
